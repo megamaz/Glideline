@@ -42,6 +42,25 @@ def sanitizer(output):
     
     return new_out
 
+def inputStringToFrameData(string) -> list[float]:
+    frame_data = []
+    t_data = []
+    for w in string.splitlines():
+        t_data.append((int(w.lstrip().split(",")[0]), float(w.split(",")[-1])))
+    for t in t_data:
+        for _ in range(t[0]):
+            frame_data.append(t[1])
+    
+    return frame_data
+
+def frameDataToInputs(frame_data, precision:int=4) -> str:
+    out = ""
+    for f in frame_data:
+        out += f"   1,PE,F,{f:.{precision}f}\n"
+    
+    return "\n".join(sanitizer(out))
+
+
 def find_best_vertical_input(initial_angle:float, initial_speed:float, facing:Facings) -> float:
     """Finds the best input (in feather degrees) to maximize vertical velocity given the frame.
     - `initial_angle` : the initial flying angle in feather degrees.
