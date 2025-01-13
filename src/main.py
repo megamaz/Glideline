@@ -12,21 +12,31 @@ def accept_multiline_input(terminator:str="DONE") -> str:
             break
     return "\n".join(all_lines)
 
+class Gamestate:
+    # keeps track of the gamestate
+    def __init__(self):
+        self.pos = [0, 0]
+        self.speed = 0
+        self.angle = 0
+
 class Tool:
     def __init__(self):
-        # keep track of the player state
-        self.init_target = [0, 0]
-        self.init_pos = [0, 0]
-        self.init_speed = 0
-        self.init_angle = 0
-        self.init_spinners = []
+        self.state = Gamestate()
+        self.target = [0, 0]
+        self.spinners = []
 
         # to interact with the cli
         self.COMMANDS = {
             "help":self.print_help,
             "target":self.set_target,
             "gamestate":self.set_gamestate,
-            "finish":"Ends the program."
+            "settings":self.set_settings,
+            "finish":"Ends the program.",
+        }
+
+        # settings
+        self.settings = {
+            "elytra_hotkey":"PE"
         }
 
     def cli_loop(self):
@@ -60,8 +70,9 @@ class Tool:
                     print(self.COMMANDS[command])
                     return
                 print(self.COMMANDS[command].__doc__)
+            else:
+                print(f"Function {command} does not exist")
         else:
-            print(f"Function {command} does not exist")
             command_list = list(self.COMMANDS.keys())
             command_list.sort()
             print(f"Available commands are: {', '.join(command_list)}\ndo `help [command]` to get more help on a specific command.")
@@ -71,15 +82,31 @@ class Tool:
     def set_target(self, *args):
         """Sets the position of the next target to optimize to."""
         print("Enter target positions.")
-        self.init_target[0] = float(input(" X: "))
-        self.init_target[1] = -float(input(" Y: "))
+        self.target[0] = float(input(" X: "))
+        self.target[1] = float(input(" Y: "))
     
     def set_gamestate(self, *args):
-        """Sets the current gamestate. Copy from Studio, and paste it into here."""
+        """Sets the current gamestate. Copy directly from Studio. Allows spinner entity watch info to be selected."""
         print("Paste in gamestate. Enter `DONE` in all caps when done.")
         gamestate = accept_multiline_input().splitlines()
         pos_index = [1 if x.startswith("Pos") else 0 for x in gamestate].index(1)
         speed_index = [1 if x.startswith("Speed") else 0 for x in gamestate].index(1)
+
+        self.state.pos = [
+            float(gamestate[pos_index][len("Pos: "):].split(", ")[0]), float(gamestate[pos_index].split(", ")[1])
+        ]
+        speedString = gamestate[speed_index][len("Speed: "):]
+        speedX = float(speedString.split(", ")[0])
+        speedY = float(speedString.split(", ")[1])
+        facing = Facings.Left if speedX < 0 else Facings.Right # flip the x speed if facing left
+        self.state.speed = sqrt((speedX**2) + (speedY**2))
+        self.state.angle = (((atan2(speedY, speedX * facing.value) * RAD_TO_DEG) + 90) + 360) % 360
+    
+    def set_settings(self, *args):
+        """Changes the settings of Glideline. All settings are reset to default on launch."""
+        for a in args:
+            ...
+
 
 
 if __name__ == "__main__":
