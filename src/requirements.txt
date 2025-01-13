@@ -1,3 +1,4 @@
 matplotlib
 clipboard
 ffmpeg
+pygubu
