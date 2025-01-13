@@ -1,68 +1,87 @@
-import tkinter as tk
 import clipboard
 from optimizer import *
 from simulator import *
 
-class MyApp(tk.Tk):
+def accept_multiline_input(terminator:str="DONE") -> str:
+    all_lines = []
+    while True:
+        data = input("... ")
+        if data != terminator:
+            all_lines.append(data)
+        else:
+            break
+    return "\n".join(all_lines)
+
+class Tool:
     def __init__(self):
-        super().__init__()
+        # keep track of the player state
+        self.init_target = [0, 0]
+        self.init_pos = [0, 0]
+        self.init_speed = 0
+        self.init_angle = 0
+        self.init_spinners = []
 
-        # Set window properties
-        self.title("Glideline")
-        self.geometry("600x400")
+        # to interact with the cli
+        self.COMMANDS = {
+            "help":self.print_help,
+            "target":self.set_target,
+            "gamestate":self.set_gamestate,
+            "finish":"Ends the program."
+        }
 
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=2)
-        self.columnconfigure(2, weight=1)
+    def cli_loop(self):
+        print("Welcome to Glideline, a CLI tool for optimizing elytra movement. Commands are case sensitive. run `help` for a list of commands.\n\nNote: it was originally planned to be a tkinter window. If you have experience with tkinter windows or other gui features, please feel free to PR the Glideline repository: https://github.com/megamaz/Glideline")
+        while True:
+            command_line = input(">>> ")
+            command = command_line.split(" ")[0]
+            if self.COMMANDS.get(command):
+                # manual implementations
+                if command == "finish":
+                    print("cya later")
+                    break
+                
+                # function implementations
+                params = []
+                if len(command_line.split(" ")) > 1:
+                    params = command_line.split(" ")[1:]
 
-        # Add widgets
-        self.create_widgets()
-
-    def create_widgets(self):
-        self.game_state = tk.Text(self, height=10, width=20)
-        self.game_state.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-
-        # self.Leftlabel = tk.Label(self, text="Enter Game state here", font=("Arial", 12))
-        # self.Leftlabel.grid(row=0, column=0)
-
-
-        # Middle section with a button and a label
-        self.middle_button = tk.Button(self, text="Run optimizer ->", command=self.run_optimizer)
-        self.middle_button.grid(row=0, column=1, padx=10, pady=10)
-
-        # Text box on the right
-        self.output_box = tk.Text(self, height=10, width=20)
-        self.output_box.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
-
-        self.copy_button = tk.Button(self, text="Copy output", command=self.copy_output)
-        self.copy_button.grid(row=1, column=2)
+                try:
+                    self.COMMANDS[command](*params)
+                except Exception as e:
+                    print(f"Error occured when running command {command}: {e}")
+            else:
+                print(f"Unrecognized command `{command}`. Commands are case-sensitive. Run `help` for a list of commands.")
     
-    def copy_output(self):
-        clipboard.copy(self.output_box.get("1.0", "end").rstrip())
+    def print_help(self, command:str=None, *args):
+        """Gives help on given commands. Seems like you know how to use it."""
+        if command:
+            if self.COMMANDS.get(command):
+                if type(self.COMMANDS[command]) == str:
+                    print(self.COMMANDS[command])
+                    return
+                print(self.COMMANDS[command].__doc__)
+        else:
+            print(f"Function {command} does not exist")
+            command_list = list(self.COMMANDS.keys())
+            command_list.sort()
+            print(f"Available commands are: {', '.join(command_list)}\ndo `help [command]` to get more help on a specific command.")
+            return
+
+
+    def set_target(self, *args):
+        """Sets the position of the next target to optimize to."""
+        print("Enter target positions.")
+        self.init_target[0] = float(input(" X: "))
+        self.init_target[1] = -float(input(" Y: "))
     
-    def run_optimizer(self):
-        # grab the game state
-        data = self.game_state.get("1.0", "end").rstrip().splitlines()
-        speedIndex = [1 if x.startswith("Speed") else 0 for x in data].index(1)
-        speedString = data[speedIndex][len("Speed: "):]
-        speedX = float(speedString.split(", ")[0])
-        speedY = float(speedString.split(", ")[1])
-        facing = Facings.Left if speedX < 0 else Facings.Right # flip the x speed if facing left
-
-        current_speed = sqrt((speedX**2) + (speedY**2))
-        current_angle = (((atan2(speedY, speedX * facing.value) * RAD_TO_DEG) + 90) + 360) % 360
-
-        out_data = []
-        for i in range(100):
-            angle_hold = find_best_vertical_input(current_angle, current_speed, facing)
-            current_speed, current_angle = simulate(current_speed, current_angle, angle_hold)
-            out_data.append(angle_hold)
-        
-        self.output_box.delete("1.0", "end")
-        self.output_box.insert("1.0", frameDataToInputs(out_data))
-
+    def set_gamestate(self, *args):
+        """Sets the current gamestate. Copy from Studio, and paste it into here."""
+        print("Paste in gamestate. Enter `DONE` in all caps when done.")
+        gamestate = accept_multiline_input().splitlines()
+        pos_index = [1 if x.startswith("Pos") else 0 for x in gamestate].index(1)
+        speed_index = [1 if x.startswith("Speed") else 0 for x in gamestate].index(1)
 
 
 if __name__ == "__main__":
-    app = MyApp()
-    app.mainloop()
+    t = Tool()
+    t.cli_loop()
