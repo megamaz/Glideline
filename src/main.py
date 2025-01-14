@@ -96,6 +96,7 @@ class Glideline:
     def set_output_text(self, text):
         output_box:tk.Entry = self.builder.get_object("output")
 
+        output_box.delete("1.0", "end")
         output_box.config(state="normal")
         output_box.insert("1.0", text)
         output_box.config(state="disabled")
