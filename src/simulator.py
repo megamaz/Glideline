@@ -22,7 +22,7 @@ def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
     else:
         target = ((STABLE_ANGLE + halfrange * yInput) * RAD_TO_DEG) + 90
         new_angle = Approach(initial_angle, target, (maxAngleChange * RAD_TO_DEG))
-    # new_angle = Clamp(new_angle, ((STABLE_ANGLE - halfrange) * RAD_TO_DEG) + 90, ((STABLE_ANGLE + halfrange) * RAD_TO_DEG) + 90)
+    new_angle = Clamp(new_angle, ((STABLE_ANGLE - halfrange) * RAD_TO_DEG) + 90, ((STABLE_ANGLE + halfrange) * RAD_TO_DEG) + 90)
 
     if sin((new_angle - 90) * DEG_TO_RAD) < sin(STABLE_ANGLE):
         decel = FAST_DECEL if initial_speed > MAX_SPEED else DECEL

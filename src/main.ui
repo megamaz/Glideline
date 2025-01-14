@@ -5,7 +5,7 @@
     <customwidgets />
   </project>
   <object class="tk.Tk" id="mainWindow" named="True">
-    <property name="geometry">1050x350</property>
+    <property name="geometry">1150x400</property>
     <property name="height">200</property>
     <property name="resizable">none</property>
     <property name="title" translatable="yes">Glideline</property>
@@ -13,6 +13,7 @@
     <child>
       <object class="tk.Text" id="gamestate" named="True">
         <property name="borderwidth">3</property>
+        <property name="font">{Consolas} 12 {}</property>
         <property name="height">10</property>
         <property name="padx">10</property>
         <property name="width">50</property>
@@ -34,6 +35,7 @@
     <child>
       <object class="tk.Text" id="output" named="True">
         <property name="borderwidth">3</property>
+        <property name="font">{Consolas} 12 {}</property>
         <property name="height">10</property>
         <property name="padx">10</property>
         <property name="relief">flat</property>

@@ -12,12 +12,10 @@ def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Fac
     c_angle, c_speed = initial_angle, initial_speed
     frame_data = []
     for _ in range(frames):
-        angle = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
-        if c_angle > 90:
-            if c_speed > MAX_SPEED:
-                angle = 90
-            else:
-                angle = 0
+        if c_angle >= 90 + STABLE_ANGLE_DEG and c_speed <= MAX_SPEED:
+            angle = 0.0
+        else:
+            angle = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
 
         c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle)
         frame_data.append(angle)
@@ -25,7 +23,7 @@ def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Fac
     return frame_data
 
 
-def method_megajoule(initial_angle, initial_speed, facing, frames, target):
+def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, target:list[float]):
     ...
 
 
@@ -74,9 +72,6 @@ class Glideline:
         builder.add_from_file("./main.ui")
         self.mainwindow = builder.get_object('mainWindow', main)
         builder.connect_callbacks(self)
-
-        # builder.create_variable("wiggle_horizontal", "int")
-        # builder.create_variable("wiggle_vertical", "int")
 
         self.default_setup()
 
