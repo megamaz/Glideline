@@ -137,10 +137,10 @@
           <object class="ttk.Entry" id="wiggle_horizontal_frames" named="True">
             <property name="text" translatable="yes">1</property>
             <property name="textvariable">int:wiggle_horizontal</property>
+            <property name="width">10</property>
             <layout manager="grid">
               <property name="column">0</property>
               <property name="row">2</property>
-              <property name="sticky">e</property>
             </layout>
           </object>
         </child>
@@ -167,8 +167,9 @@
           <object class="ttk.Entry" id="wiggle_vertical_frames" named="True">
             <property name="text" translatable="yes">1</property>
             <property name="textvariable">int:wiggle_vertical</property>
+            <property name="width">10</property>
             <layout manager="grid">
-              <property name="column">3</property>
+              <property name="column">2</property>
               <property name="row">2</property>
             </layout>
           </object>
@@ -177,7 +178,26 @@
           <object class="ttk.Label" id="label8">
             <property name="text" translatable="yes">Pull-up frames</property>
             <layout manager="grid">
-              <property name="column">3</property>
+              <property name="column">2</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Entry" id="entry1">
+            <property name="textvariable">int:wiggle_offset</property>
+            <property name="width">10</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="row">2</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label9">
+            <property name="text" translatable="yes">Wiggle Offset</property>
+            <layout manager="grid">
+              <property name="column">1</property>
               <property name="row">1</property>
             </layout>
           </object>
