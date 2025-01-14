@@ -1,5 +1,6 @@
-from math import atan2, sqrt
+from math import atan2, sqrt, sin, cos
 from constants import *
+from utilities import *
 import tkinter.ttk as ttk
 import tkinter as tk
 import optimizer
@@ -23,8 +24,111 @@ def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Fac
     return frame_data
 
 
-def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, target:list[float]):
-    ...
+def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, pos:list[float], target:list[float]) -> tuple[list[float]]:
+    # returns (earliest time, highest speed)
+    H = 1
+    S = 1
+
+    init_H = 1
+    init_S = 1
+
+    undershoot_ratio = None
+    overshoot_ratio = None
+
+    frame_data_earliest = []
+    frame_data_fastest = []
+    best_speed = 0
+    best_time = float("inf")
+    while True:
+        all_data = []
+        f_counter = 0
+        c_pos = list(pos)
+        c_angle, c_speed = initial_angle, initial_speed
+        # step 1: level out
+        while abs(90 - c_angle) >= 1:
+            angle_hold = 0
+            if c_angle > 90 + STABLE_ANGLE_DEG:
+                angle_hold = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
+            else:
+                angle_hold = 90.0
+            
+            c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle_hold)
+            c_pos[0] += c_speed * sin(c_angle * DEG_TO_RAD) * facing.value * DELTA_TIME
+            c_pos[1] -= c_speed * cos(c_angle * DEG_TO_RAD) * DELTA_TIME
+
+            f_counter += 1
+            all_data.append(angle_hold)
+        
+        midpoint = (c_pos[0] + target[0]) / 2
+
+        frame_data = method_manual_wiggle(c_angle, c_speed, facing, 100, H, S, 0)
+        for f in range(100):
+            c_angle, c_speed = simulator.simulate(c_angle, c_speed, frame_data[f])
+            c_pos[0] += c_speed * sin(c_angle * DEG_TO_RAD) * facing.value * DELTA_TIME
+            c_pos[1] -= c_speed * cos(c_angle * DEG_TO_RAD) * DELTA_TIME
+
+            f_counter += 1
+            all_data.append(frame_data[f])
+            
+            if abs(midpoint - c_pos[0]) <= c_speed * DELTA_TIME:
+                break
+        
+        if H + S > f_counter:
+            break
+
+        frame_data = method_manual_wiggle(c_angle, c_speed, facing, 100, S, H, 0)
+        for f in range(100):
+            c_angle, c_speed = simulator.simulate(c_angle, c_speed, frame_data[f])
+            c_pos[0] += c_speed * sin(c_angle * DEG_TO_RAD) * facing.value * DELTA_TIME
+            c_pos[1] -= c_speed * cos(c_angle * DEG_TO_RAD) * DELTA_TIME
+
+            f_counter += 1
+            all_data.append(frame_data[f])
+
+            if abs(target[0] - c_pos[0]) <= c_speed * DELTA_TIME:
+                break
+        
+
+        if dist(c_pos, target) < c_speed * DELTA_TIME:
+            # we've arrived
+            print(f"ratio {H}f/{S}f arrives in {f_counter}f with speed={c_speed}")
+            if f_counter < best_time:
+                best_time = f_counter
+                frame_data_earliest = list(all_data)
+            if c_speed > best_speed:
+                best_speed = c_speed
+                frame_data_fastest = list(all_data)
+
+            init_S += 1
+            H = init_H
+            S = init_S
+            
+            overshoot_ratio = None
+            undershoot_ratio = None
+
+        elif c_pos[1] > target[1]: # we arrive below
+            print("undershot")
+            S += 1
+            undershoot_ratio = (H, S)
+        elif c_pos[1] < target[1]:
+            print("overshot")
+            H += 1
+            overshoot_ratio = (H, S)
+
+        if undershoot_ratio and overshoot_ratio:
+            new_ratio = (
+                (undershoot_ratio[0] + overshoot_ratio[0]) / 2,
+                (undershoot_ratio[1] + overshoot_ratio[1]) / 2,
+            )
+            if new_ratio[0] % 1 != 0 or new_ratio[1] % 1 != 0:
+                new_ratio = (new_ratio[0]*2, new_ratio[1]*2)
+
+            H, S = new_ratio
+
+            undershoot_ratio = None
+            overshoot_ratio = None
+    
+    return frame_data_earliest, frame_data_fastest
 
 
 def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Facings, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
@@ -97,6 +201,7 @@ class Glideline:
         ]
 
         gamestate_data = gamestate_box.get("1.0", "end").rstrip().splitlines()
+
         speedIndex = [1 if x.startswith(
             "Speed") else 0 for x in gamestate_data].index(1)
         speedString = gamestate_data[speedIndex][len("Speed: "):]
@@ -109,6 +214,14 @@ class Glideline:
         initial_angle = (
             ((atan2(speedY, speedX * facing.value) * RAD_TO_DEG) + 90) + 360) % 360
 
+        posIndex = [1 if x.startswith(
+            "Pos") else 0 for x in gamestate_data].index(1)
+        posString = gamestate_data[posIndex][len("Pos: "):]
+        position = [
+            float(posString.split(", ")[0]),
+            float(posString.split(", ")[1])
+        ]
+
         # get manual wiggle data
         wiggle_horizontal = self.builder.get_variable("wiggle_horizontal").get()
         wiggle_vertical = self.builder.get_variable("wiggle_vertical").get()
@@ -120,7 +233,7 @@ class Glideline:
             self.set_output_text(optimizer.frameDataToInputs(frame_data))
 
         elif active_method == 1:  # megajoule method
-            self.set_output_text("Not yet implemented.")
+            method_megajoule(initial_angle, initial_speed, facing, frame_count, position, target)
 
         elif active_method == 2:  # manual wiggle
             frame_data = method_manual_wiggle(initial_angle, initial_speed, facing, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
