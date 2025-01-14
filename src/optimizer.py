@@ -90,7 +90,7 @@ def find_best_vertical_input(initial_angle:float, initial_speed:float, facing:Fa
         for angle in frange(angle_min, angle_max, step_size):
             # simulate in-game speed changes
             new_speed = initial_speed
-            new_angle, new_speed = simulator.simulate(initial_speed, initial_angle, angle)
+            new_angle, new_speed = simulator.simulate(initial_angle, initial_speed, angle)
             ySpeed = new_speed * -sin((90 - new_angle) * DEG_TO_RAD)
 
             # since y speed is negative when moving up
@@ -113,6 +113,7 @@ def find_best_vertical_input(initial_angle:float, initial_speed:float, facing:Fa
         step_size /= 10.0
 
         iteration += 1
+
     initial_angle = best_angleF
     initial_speed = best_total_speed
 

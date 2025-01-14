@@ -1,0 +1,240 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.4" author="PygubuDesigner 0.39.3">
+  <project>
+    <settings />
+    <customwidgets />
+  </project>
+  <object class="tk.Tk" id="mainWindow" named="True">
+    <property name="geometry">1050x350</property>
+    <property name="height">200</property>
+    <property name="resizable">none</property>
+    <property name="title" translatable="yes">Glideline</property>
+    <property name="width">200</property>
+    <child>
+      <object class="tk.Text" id="gamestate" named="True">
+        <property name="borderwidth">3</property>
+        <property name="height">10</property>
+        <property name="padx">10</property>
+        <property name="width">50</property>
+        <layout manager="grid">
+          <property name="padx">10</property>
+          <property name="row">2</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Label" id="label1">
+        <property name="text" translatable="yes">Enter Game state</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">0</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Text" id="output" named="True">
+        <property name="borderwidth">3</property>
+        <property name="height">10</property>
+        <property name="padx">10</property>
+        <property name="relief">flat</property>
+        <property name="state">disabled</property>
+        <property name="width">50</property>
+        <layout manager="grid">
+          <property name="column">3</property>
+          <property name="padx">10</property>
+          <property name="row">2</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Label" id="label2">
+        <property name="text" translatable="yes">Optimized Inputs</property>
+        <layout manager="grid">
+          <property name="column">3</property>
+          <property name="row">0</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Button" id="copy" named="True">
+        <property name="command" type="command" cbtype="simple">copy_output</property>
+        <property name="text" translatable="yes">Copy Output</property>
+        <layout manager="grid">
+          <property name="column">3</property>
+          <property name="row">3</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="target" named="True">
+        <property name="height">70</property>
+        <property name="width">200</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">4</property>
+        </layout>
+        <child>
+          <object class="ttk.Entry" id="entry3">
+            <property name="textvariable">double:target_x</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="row">1</property>
+              <property name="sticky">e</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label3">
+            <property name="text" translatable="yes">Target Position</property>
+            <layout manager="grid">
+              <property name="column">3</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label4">
+            <property name="text" translatable="yes">X:</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">1</property>
+              <property name="sticky">w</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Entry" id="entry4">
+            <property name="textvariable">double:target_y</property>
+            <layout manager="grid">
+              <property name="column">4</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label5">
+            <property name="text" translatable="yes">Y:</property>
+            <layout manager="grid">
+              <property name="column">3</property>
+              <property name="row">1</property>
+              <property name="sticky">e</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="manualWiggle" named="True">
+        <property name="borderwidth">5</property>
+        <property name="height">70</property>
+        <property name="width">200</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="pady">10</property>
+          <property name="row">5</property>
+        </layout>
+        <child>
+          <object class="ttk.Entry" id="wiggle_horizontal_frames" named="True">
+            <property name="text" translatable="yes">1</property>
+            <property name="textvariable">int:wiggle_horizontal</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">2</property>
+              <property name="sticky">e</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label6">
+            <property name="text" translatable="yes">Manual Wiggle Values</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="row">0</property>
+              <property name="sticky">n</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label7">
+            <property name="text" translatable="yes">Horizontal frames</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Entry" id="wiggle_vertical_frames" named="True">
+            <property name="text" translatable="yes">1</property>
+            <property name="textvariable">int:wiggle_vertical</property>
+            <layout manager="grid">
+              <property name="column">3</property>
+              <property name="row">2</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label8">
+            <property name="text" translatable="yes">Pull-up frames</property>
+            <layout manager="grid">
+              <property name="column">3</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="frame3">
+        <property name="height">100</property>
+        <property name="width">110</property>
+        <layout manager="grid">
+          <property name="column">1</property>
+          <property name="row">2</property>
+        </layout>
+        <child>
+          <object class="ttk.Combobox" id="method" named="True">
+            <property name="values">"normal pullup" megajoule "manual wiggle"</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="pady">10</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="optimize_button" named="True">
+            <property name="command" type="command" cbtype="simple">optimize</property>
+            <property name="text" translatable="yes">Optimize -&gt;</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">2</property>
+              <property name="sticky">e</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="methodLabel" named="True">
+            <property name="text" translatable="yes">Method</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Entry" id="frame_count" named="True">
+            <property name="text" translatable="yes">100</property>
+            <property name="textvariable">int:frames</property>
+            <property name="width">8</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">2</property>
+              <property name="sticky">w</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

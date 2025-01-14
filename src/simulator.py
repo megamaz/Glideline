@@ -1,6 +1,6 @@
 from utilities import *
 
-def simulate(initial_speed:float, initial_angle:float, angle:float) -> tuple:
+def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
     """Simulates elytra speed and angle changes. Does not take stable_timer into account.
 
     Params (all degrees are in feather degrees)
@@ -9,7 +9,7 @@ def simulate(initial_speed:float, initial_angle:float, angle:float) -> tuple:
     - `angle` the angle held on the controller. 0 degrees is fully up, and 90 is fully right (clockwise)
     
     Returns a tuple:
-    - new_speed, new_angle
+    - new_angle, new_speed
     """
     maxAngleChange = maxAngleChangeFormula(initial_speed)
     
@@ -32,4 +32,4 @@ def simulate(initial_speed:float, initial_angle:float, angle:float) -> tuple:
         if initial_speed < MAX_SPEED:
             new_speed = Approach(initial_speed, MAX_SPEED, DELTA_TIME * ACCEL * abs(yInput))
 
-    return new_speed, new_angle
+    return new_angle, new_speed
