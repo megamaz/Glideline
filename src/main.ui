@@ -58,26 +58,17 @@
       </object>
     </child>
     <child>
-      <object class="ttk.Button" id="copy" named="True">
-        <property name="command" type="command" cbtype="simple">copy_output</property>
-        <property name="text" translatable="yes">Copy Output</property>
-        <layout manager="grid">
-          <property name="column">3</property>
-          <property name="row">3</property>
-        </layout>
-      </object>
-    </child>
-    <child>
       <object class="ttk.Frame" id="target" named="True">
         <property name="height">70</property>
         <property name="width">200</property>
         <layout manager="grid">
           <property name="column">0</property>
-          <property name="row">4</property>
+          <property name="row">3</property>
         </layout>
         <child>
           <object class="ttk.Entry" id="entry3">
             <property name="textvariable">double:target_x</property>
+            <property name="width">8</property>
             <layout manager="grid">
               <property name="column">1</property>
               <property name="row">1</property>
@@ -107,6 +98,7 @@
         <child>
           <object class="ttk.Entry" id="entry4">
             <property name="textvariable">double:target_y</property>
+            <property name="width">8</property>
             <layout manager="grid">
               <property name="column">4</property>
               <property name="row">1</property>
@@ -133,7 +125,7 @@
         <layout manager="grid">
           <property name="column">0</property>
           <property name="pady">10</property>
-          <property name="row">5</property>
+          <property name="row">4</property>
         </layout>
         <child>
           <object class="ttk.Entry" id="wiggle_horizontal_frames" named="True">
@@ -252,6 +244,73 @@
             <layout manager="grid">
               <property name="column">0</property>
               <property name="row">2</property>
+              <property name="sticky">w</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="height">10</property>
+        <property name="width">400</property>
+        <layout manager="grid">
+          <property name="column">3</property>
+          <property name="pady">10</property>
+          <property name="row">3</property>
+        </layout>
+        <child>
+          <object class="ttk.Button" id="copy" named="True">
+            <property name="command" type="command" cbtype="simple">copy_output</property>
+            <property name="text" translatable="yes">Copy Output</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="padx">10</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Combobox" id="mj_method" named="True">
+            <property name="values">"Fastest speed" "Fastest arrival"</property>
+            <property name="xscrollcommand" type="command" cbtype="scroll">mj_new_selection</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="frame4">
+        <property name="height">70</property>
+        <property name="width">200</property>
+        <layout manager="grid">
+          <property name="column">3</property>
+          <property name="pady">10</property>
+          <property name="row">4</property>
+          <property name="sticky">n</property>
+        </layout>
+        <child>
+          <object class="ttk.Entry" id="elytra_hotkey" named="True">
+            <property name="text" translatable="yes">PE</property>
+            <property name="textvariable">string:hotkey</property>
+            <property name="width">5</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="padx">10</property>
+              <property name="row">0</property>
+              <property name="sticky">e</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label10">
+            <property name="text" translatable="yes">Elytra Hotkey</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="row">0</property>
               <property name="sticky">w</property>
             </layout>
           </object>

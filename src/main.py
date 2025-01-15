@@ -24,111 +24,130 @@ def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Fac
     return frame_data
 
 
-def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, pos:list[float], target:list[float]) -> tuple[list[float]]:
+def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, init_pos:list[float], target:list[float]) -> tuple[list[float]]:
     # returns (earliest time, highest speed)
-    H = 1
-    S = 1
-
-    init_H = 1
-    init_S = 1
-
-    undershoot_ratio = None
-    overshoot_ratio = None
 
     frame_data_earliest = []
     frame_data_fastest = []
     best_speed = 0
     best_time = float("inf")
+
+    init_H = 1
+    init_S = 1
+    H = 1
+    S = 1
+    under_ratio = None
+    over_ratio = None
+    last_diff = 0
+    closest = float("inf")
+    options = 0
     while True:
-        all_data = []
-        f_counter = 0
-        c_pos = list(pos)
-        c_angle, c_speed = initial_angle, initial_speed
-        # step 1: level out
-        while abs(90 - c_angle) >= 1:
-            angle_hold = 0
-            if c_angle > 90 + STABLE_ANGLE_DEG:
-                angle_hold = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
-            else:
-                angle_hold = 90.0
-            
-            c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle_hold)
-            c_pos[0] += c_speed * sin(c_angle * DEG_TO_RAD) * facing.value * DELTA_TIME
-            c_pos[1] -= c_speed * cos(c_angle * DEG_TO_RAD) * DELTA_TIME
-
-            f_counter += 1
-            all_data.append(angle_hold)
+        end_all = False
+        arrived = False
+        d2, d1 = 0, 0
+        pos = list(init_pos)
+        inputs_angles = []
+        current_speed, current_angle = initial_speed, initial_angle
+        f = 0
+        midpoint = 0
+        if current_angle > 90:
+            frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, 0)
+        else:
+            frame_data = [90,] * 100
         
-        midpoint = (c_pos[0] + target[0]) / 2
-
-        frame_data = method_manual_wiggle(c_angle, c_speed, facing, 100, H, S, 0)
-        for f in range(100):
-            c_angle, c_speed = simulator.simulate(c_angle, c_speed, frame_data[f])
-            c_pos[0] += c_speed * sin(c_angle * DEG_TO_RAD) * facing.value * DELTA_TIME
-            c_pos[1] -= c_speed * cos(c_angle * DEG_TO_RAD) * DELTA_TIME
-
-            f_counter += 1
-            all_data.append(frame_data[f])
+        delay = -1
+        for i in range(200):
+            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
+            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
+            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            inputs_angles.append(frame_data[i])
+            f += 1
+            if abs(90.0 - current_angle) <= 1.0 and delay < 0:
+                midpoint = (pos[0] + target[0]) / 2
+                break
             
-            if abs(midpoint - c_pos[0]) <= c_speed * DELTA_TIME:
+
+        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, d1)
+        for i in range(200):
+            if pos[0] * facing.value > midpoint * facing.value:
                 break
         
-        if H + S > f_counter:
+            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
+            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
+            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            inputs_angles.append(frame_data[i])
+            f += 1
+
+        if H + S > f:
+            end_all = True
             break
 
-        frame_data = method_manual_wiggle(c_angle, c_speed, facing, 100, S, H, 0)
-        for f in range(100):
-            c_angle, c_speed = simulator.simulate(c_angle, c_speed, frame_data[f])
-            c_pos[0] += c_speed * sin(c_angle * DEG_TO_RAD) * facing.value * DELTA_TIME
-            c_pos[1] -= c_speed * cos(c_angle * DEG_TO_RAD) * DELTA_TIME
+        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, S, H, d2)
+        for i in range(200):
+            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
+            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
+            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            inputs_angles.append(frame_data[i])
+            f += 1
 
-            f_counter += 1
-            all_data.append(frame_data[f])
-
-            if abs(target[0] - c_pos[0]) <= c_speed * DELTA_TIME:
+            if dist(pos, target) <= current_speed * DELTA_TIME:
+                arrived = True
                 break
-        
+            if pos[0] * facing.value > target[0] * facing.value:
+                break
 
-        if dist(c_pos, target) < c_speed * DELTA_TIME:
-            # we've arrived
-            print(f"ratio {H}f/{S}f arrives in {f_counter}f with speed={c_speed}")
-            if f_counter < best_time:
-                best_time = f_counter
-                frame_data_earliest = list(all_data)
-            if c_speed > best_speed:
-                best_speed = c_speed
-                frame_data_fastest = list(all_data)
-
-            init_S += 1
-            H = init_H
-            S = init_S
+        if arrived:
+            print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in f{f}, speed={current_speed}")
+            if current_speed > best_speed:
+                closest = -1
+                best_speed = current_speed
+                frame_data_fastest = list(inputs_angles)
+            if f < best_time:
+                closest = -1
+                best_time = f
+                frame_data_earliest = list(inputs_angles)
             
-            overshoot_ratio = None
-            undershoot_ratio = None
+            if target[1] < init_pos[1]: # target is above us
+                init_H += 1
+                H = init_H
+                S = 1
+                over_ratio = None
+                under_ratio = None
+            else:
+                init_S += 1
+                H = 1
+                S = init_S
+                over_ratio = None
+                under_ratio = None
+        else:
+            # print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d2} failed: Y diff from target {abs(pos[1] - target[1])} ({'undershot' if pos[1] > target[1] else 'overshot'})")
+            if abs(pos[1] - target[1]) < closest:
+                closest = abs(pos[1] - target[1])
 
-        elif c_pos[1] > target[1]: # we arrive below
-            print("undershot")
-            S += 1
-            undershoot_ratio = (H, S)
-        elif c_pos[1] < target[1]:
-            print("overshot")
-            H += 1
-            overshoot_ratio = (H, S)
+            if pos[1] > target[1]:
+                under_ratio = (H, S)
+                S += 1
+            else:
+                over_ratio = (H, S)
+                H += 1
+            
+            if over_ratio and under_ratio:
+                new_ratio = ((over_ratio[0] + under_ratio[0])/2, (over_ratio[1] + under_ratio[1])/2)
+                if new_ratio[0] % 1 != 0 or new_ratio[1] % 1 != 0:
+                    new_ratio = (new_ratio[0]*2, new_ratio[1]*2)
+                H, S = new_ratio
+                under_ratio = None
+                over_ratio = None
+            
+            if abs(pos[1] - target[1]) == last_diff:
+                break
 
-        if undershoot_ratio and overshoot_ratio:
-            new_ratio = (
-                (undershoot_ratio[0] + overshoot_ratio[0]) / 2,
-                (undershoot_ratio[1] + overshoot_ratio[1]) / 2,
-            )
-            if new_ratio[0] % 1 != 0 or new_ratio[1] % 1 != 0:
-                new_ratio = (new_ratio[0]*2, new_ratio[1]*2)
+            last_diff = abs(pos[1] - target[1])
+            
+        options += 1
 
-            H, S = new_ratio
-
-            undershoot_ratio = None
-            overshoot_ratio = None
-    
-    return frame_data_earliest, frame_data_fastest
+    print(f"Done, tried {options} ratios")
+    return frame_data_fastest, frame_data_earliest
 
 
 def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Facings, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
@@ -152,8 +171,7 @@ def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Fac
         if wiggling:
             angle_hold = 90.0 if facing == Facings.Right else 270.0
         else:
-            angle_hold = optimizer.find_best_vertical_input(
-                c_angle, c_speed, facing)
+            angle_hold = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
 
         frame_data.append(angle_hold)
         c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle_hold)
@@ -177,6 +195,9 @@ class Glideline:
         self.mainwindow = builder.get_object('mainWindow', main)
         builder.connect_callbacks(self)
 
+        self.input_data_mj = [[0,], [0,]]
+        self.last_method = 0
+
         self.default_setup()
 
     def default_setup(self):
@@ -184,12 +205,16 @@ class Glideline:
         method: ttk.Combobox = self.builder.get_object('method')
         method.current(0)
 
+        mj_method: ttk.Combobox = self.builder.get_object('mj_method')
+        mj_method.current(0)
+
     def run(self):
         self.mainwindow.mainloop()
 
     def optimize(self):
         method: ttk.Combobox = self.builder.get_object('method')
         active_method = method.current()
+        self.last_method = active_method
 
         gamestate_box: tk.Entry = self.builder.get_object("gamestate")
 
@@ -199,6 +224,8 @@ class Glideline:
             self.builder.get_variable("target_x").get(),
             self.builder.get_variable("target_y").get()
         ]
+
+        hotkey = self.builder.get_variable("hotkey").get()
 
         gamestate_data = gamestate_box.get("1.0", "end").rstrip().splitlines()
 
@@ -230,14 +257,16 @@ class Glideline:
         if active_method == 0:  # normal pullup
             frame_data = method_normal_pullup(
                 initial_angle, initial_speed, facing, frame_count)
-            self.set_output_text(optimizer.frameDataToInputs(frame_data))
+            self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
         elif active_method == 1:  # megajoule method
-            method_megajoule(initial_angle, initial_speed, facing, frame_count, position, target)
+            mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
+            self.input_data_mj[0], self.input_data_mj[1] = method_megajoule(initial_angle, initial_speed, facing, frame_count, position, target)
+            self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
 
         elif active_method == 2:  # manual wiggle
             frame_data = method_manual_wiggle(initial_angle, initial_speed, facing, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
-            self.set_output_text(optimizer.frameDataToInputs(frame_data))
+            self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
     def set_output_text(self, text):
         output_box: tk.Entry = self.builder.get_object("output")
@@ -250,8 +279,13 @@ class Glideline:
         output: tk.Text = self.builder.get_object("output")
         clipboard.copy(output.get("1.0", "end").rstrip())
 
-    def update_method(self, *args):
-        print(args)
+    def mj_new_selection(self, *args):
+        # only change text if last mathod was mj
+        if self.last_method == 1:
+            hotkey = self.builder.get_variable("hotkey").get()
+            mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
+
+            self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
 
 
 if __name__ == "__main__":

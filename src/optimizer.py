@@ -64,10 +64,10 @@ def inputStringToFrameData(string) -> list[float]:
     return frame_data
 
 
-def frameDataToInputs(frame_data, precision: int = 4) -> str:
+def frameDataToInputs(frame_data, hotkey:str, precision:int=4) -> str:
     out = ""
     for f in frame_data:
-        out += f"   1,PE,F,{f:.{precision}f}\n"
+        out += f"   1,{hotkey},F,{f:.{precision}f}\n"
 
     return "\n".join(sanitizer(out))
 
@@ -84,8 +84,7 @@ def find_best_vertical_input(initial_angle: float, initial_speed: float, facing:
     # if we're moving "down" but above the stable angle
     # then we don't want to optimize for immediate height
     if initial_angle > 90 and initial_angle < 90 + STABLE_ANGLE_DEG:
-        angle_min = (acos((STABLE_ANGLE - (((initial_angle - 90) * pi)/180.0)))
-                     )*RAD_TO_DEG - (maxAngleChange * RAD_TO_DEG)
+        angle_min = (acos((STABLE_ANGLE - (((initial_angle - 90) * pi)/180.0))))*RAD_TO_DEG - (maxAngleChange * RAD_TO_DEG)
     angle_max = 180
 
     init_min_angle = angle_min
@@ -98,13 +97,19 @@ def find_best_vertical_input(initial_angle: float, initial_speed: float, facing:
     step_size = 1
     iteration = 1
 
+    end_prematurely = False
     while iteration < PRECISION_COMPUTE:
         for angle in frange(angle_min, angle_max, step_size):
+            if initial_angle < 180:
+                angle = angle_max - angle + angle_min
             # simulate in-game speed changes
-            new_speed = initial_speed
-            new_angle, new_speed = simulator.simulate(
-                initial_angle, initial_speed, angle)
+            new_angle, new_speed = simulator.simulate(initial_angle, initial_speed, angle)
             ySpeed = new_speed * -sin((90 - new_angle) * DEG_TO_RAD)
+
+            # if we're flying down then we want to optimize for long-term speed
+            if initial_angle > 90 + STABLE_ANGLE_DEG and initial_speed <= MAX_SPEED:
+                angle = 0
+                end_prematurely = True
 
             # since y speed is negative when moving up
             if ySpeed < best_yspeed:
@@ -112,6 +117,9 @@ def find_best_vertical_input(initial_angle: float, initial_speed: float, facing:
                 best_total_speed = new_speed
                 best_angleI = angle
                 best_angleF = new_angle
+
+            if end_prematurely:
+                break
 
         # once we've found our best angle for this frame, narrow down precision
         angle_min = best_angleI - 10/(10**iteration)
