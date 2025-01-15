@@ -1,0 +1,14 @@
+Welcome to Glideline! Some quick tips on using this:
+Copy the game state from Studio and paste it into the left box, select your preferred optimization method, and hit optimize.
+
+
+Here's how each method works:
+- Optimized Pullup: Simply generates the inputs to pull-up with the best speed retention.
+
+- Automated Wiggle: Requires the target to be set. 
+    Tries a bunch of different wiggle patterns and outputs the best one(s). Use the dropdown on the right to select between one that gets to your target earlier, or with more speed.
+
+- Manual Wiggle: Uses the wiggle data you set to generate a wiggle (wiggles between holding 90 and optimized pull-up.)
+    The offset controls how far into the wiggle cycle you start.
+
+A wiggle is a quick alternation between holding a horizontal input to preserve speed, and a vertical input to change your direction. It's more optimal than holding a single direction, since you only lose speed on every other frame.

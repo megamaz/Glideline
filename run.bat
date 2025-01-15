@@ -10,4 +10,3 @@ if not exist venv (
 
 echo Running
 .\venv\Scripts\python.exe main.py
-pause

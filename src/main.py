@@ -1,13 +1,14 @@
 from math import atan2, sqrt, sin, cos
+from tkinter import messagebox
 from constants import *
 from utilities import *
 import tkinter.ttk as ttk
 import tkinter as tk
+import webbrowser
 import optimizer
 import simulator
 import clipboard
 import pygubu
-
 
 def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Facings, frames: int) -> list[float]:
     c_angle, c_speed = initial_angle, initial_speed
@@ -286,6 +287,12 @@ class Glideline:
             mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
 
             self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
+    
+    def info(self):
+        box = messagebox.showinfo("How To Use", open("./infobox.txt", "r", encoding="utf-8").read())
+    
+    def doc_clipboard(self):
+        webbrowser.open_new("https://docs.google.com/document/d/1xFF6wjdig5k9vOUF3mAvvWh4pF2HBvOw5PJ-aCNNeTo")
 
 
 if __name__ == "__main__":
