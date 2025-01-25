@@ -2,4 +2,3 @@ matplotlib
 clipboard
 ffmpeg
 pygubu
-webbrowser
