@@ -51,8 +51,10 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
         current_speed, current_angle = initial_speed, initial_angle
         f = 0
         midpoint = 0
+
+        # Level out before starting algorithm
         if current_angle > 90:
-            frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, 0)
+            frame_data = method_normal_pullup(current_angle, current_speed, facing, 200)
         else:
             frame_data = [90,] * 100
         
@@ -67,8 +69,8 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
                 midpoint = (pos[0] + target[0]) / 2
                 break
             
-
-        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, d1)
+        # First half of flight path
+        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, 0)
         for i in range(200):
             if pos[0] * facing.value > midpoint * facing.value:
                 break
@@ -79,11 +81,14 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
             inputs_angles.append(frame_data[i])
             f += 1
 
+        # Kill the optimizer if the ratio is longer than our flight path
         if H + S > f:
-            end_all = True
             break
 
-        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, S, H, d2)
+        # Second half of flight path
+        # The offset is equal to the VERTICAL pullup
+        # This is to ensure that we properly reverse the ratio and start on horizontal rather than vertical
+        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, S, H, H)
         for i in range(200):
             current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
             pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
@@ -96,7 +101,8 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
                 break
             if pos[0] * facing.value > target[0] * facing.value:
                 break
-
+        
+        # If we're arrived do some math shenanigans to try some other ratios
         if arrived:
             print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in f{f}, speed={current_speed}")
             if current_speed > best_speed:
@@ -199,7 +205,10 @@ class Glideline:
         self.input_data_mj = [[0,], [0,]]
         self.last_method = 0
 
+        self.couldnt_path_msg = "Couldn't path to target.\nAutomated Wiggles are better at long, horizontal\ndistances.\nIf your scenario doesn't fit that description,\nthen you should stick to manual wiggles and\noptimal pullups."
+
         self.default_setup()
+
 
     def default_setup(self):
         print("Running default window setup")
@@ -263,6 +272,13 @@ class Glideline:
         elif active_method == 1:  # megajoule method
             mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
             self.input_data_mj[0], self.input_data_mj[1] = method_megajoule(initial_angle, initial_speed, facing, frame_count, position, target)
+            # mj might not arrive at the target
+            # need to account for that
+            # if it doesn't, then both input_data_mj[0] and [1] will be empty
+            if len(self.input_data_mj[0]) == 0:
+                self.set_output_text(self.couldnt_path_msg)
+                return
+            
             self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
 
         elif active_method == 2:  # manual wiggle
@@ -285,6 +301,10 @@ class Glideline:
         if self.last_method == 1:
             hotkey = self.builder.get_variable("hotkey").get()
             mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
+            
+            if len(self.input_data_mj[mj_selection.current()]) == 0:
+                self.set_output_text(self.couldnt_path_msg)
+                return
 
             self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
     

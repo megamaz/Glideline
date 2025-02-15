@@ -7,6 +7,7 @@ Here's how each method works:
 
 - Automated Wiggle: Requires the target to be set. 
     Tries a bunch of different wiggle patterns and outputs the best one(s). Use the dropdown on the right to select between one that gets to your target earlier, or with more speed.
+    **Quick disclaimer that this algorithm is only good for long, horizontal distances with no obstrusions. If you want to gain height, this algorithm isn't really built for this, and you should stick to manual wiggles and optimal pullups.
 
 - Manual Wiggle: Uses the wiggle data you set to generate a wiggle (wiggles between holding 90 and optimized pull-up.)
     The offset controls how far into the wiggle cycle you start.
