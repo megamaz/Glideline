@@ -199,13 +199,18 @@ class Glideline:
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(".")
         builder.add_from_file("./main.ui")
-        self.mainwindow = builder.get_object('mainWindow', main)
+        self.mainwindow:tk.Tk = builder.get_object('mainWindow', main)
         builder.connect_callbacks(self)
 
         self.input_data_mj = [[0,], [0,]]
         self.last_method = 0
 
         self.couldnt_path_msg = "Couldn't path to target.\nAutomated Wiggles are better at long, horizontal\ndistances.\nIf your scenario doesn't fit that description,\nthen you should stick to manual wiggles and\noptimal pullups."
+
+        version_f = open("./version.txt", "r", encoding="utf-8")
+        version = version_f.read()
+        version_f.close()
+        self.mainwindow.title(f"Glideline {version}")
 
         self.default_setup()
 
