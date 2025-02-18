@@ -162,7 +162,9 @@ def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Fac
     # False means we're stabilizing, True means we're going horizontal
     wiggle_countdown = wiggle_vertical
     # do the offset
-    for _ in range(wiggle_offset):
+    # this should always be a whole number anyways
+    # even if it's a float
+    for _ in range(int(wiggle_offset)):
         wiggle_countdown -= 1
         if wiggle_countdown <= 0:
             wiggling = not wiggling
