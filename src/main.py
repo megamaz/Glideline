@@ -9,6 +9,7 @@ import optimizer
 import simulator
 import clipboard
 import pygubu
+import os
 
 def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Facings, frames: int) -> list[float]:
     c_angle, c_speed = initial_angle, initial_speed
@@ -226,6 +227,11 @@ class Glideline:
         mj_method.current(0)
 
     def run(self):
+        # check if first time running
+        first_launch = not os.path.exists("./firstlaunch")
+        if first_launch:
+            open("./firstlaunch", "w").close()
+            self.mainwindow.after(0, self.info)
         self.mainwindow.mainloop()
 
     def optimize(self):
