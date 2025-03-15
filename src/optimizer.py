@@ -49,7 +49,7 @@ def inputStringToFrameData(string) -> list[float]:
 def frameDataToInputs(frame_data, hotkey:str, precision:int=4) -> str:
     out = ""
     for f in frame_data:
-        out += f"   1,{hotkey},F,{f:.{precision}f}\n"
+        out += f"   1,{hotkey},F,{f:.{precision}f}".rstrip("0").rstrip(".") + "\n"
 
     return "\n".join(sanitizer(out))
 
