@@ -3,6 +3,7 @@ from math import sin, asin, sqrt
 
 def maxAngleChangeFormula(speed):
     if speed == 0.0:
+        print("[Warning]: Applying maxAngleChangeFormula to speed=0. Returning infinity.")
         return float("inf")
     return DELTA_TIME * MAX_ANGLE_CHANGE_INV_SPEED_FACTOR / speed
 
@@ -30,3 +31,8 @@ def Clamp(value, min_value, max_value):
 def dist(a, b):
     return sqrt((b[0] - a[0])**2 + (b[1] - a[1])**2)
 
+def frange(min, max, step):
+    value = min
+    while value < max:
+        value += step
+        yield value

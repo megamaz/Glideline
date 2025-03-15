@@ -1,8 +1,8 @@
 from math import sin, cos, pi, sqrt, atan2, acos
 from enum import Enum
 from constants import *
+from utilities import *
 import simulator
-import time
 
 ELYTRA_HOTKEY = "PE"  # change this if you're using PP or something else
 PRECISION_OUT = 4  # how many digits of precision are printed to the console
@@ -18,24 +18,7 @@ WIGGLE_FRAMES_HORIZONTAL = 2
 # if DO_WIGGLE is true, neither of these should be 0.
 WIGGLE_FRAMES_STABILIZER = 2
 
-
-def frange(min, max, step):
-    value = min
-    while value < max:
-        value += step
-        yield value
-
-
-def Approach(value, target, step):
-    if value > target:
-        return max(value - step, target)
-    elif value < target:
-        return min(value + step, target)
-    return target
-
 # "santize" output (combine frames with repeated inputs)
-
-
 def sanitizer(output):
     new_out = [output.splitlines()[0]]
     for line in output.splitlines()[1:]:
@@ -44,8 +27,7 @@ def sanitizer(output):
         if angle == new_out[-1].split(",")[-1]:
             length = int(new_out[-1].split(",")[0].strip())
             length += 1
-            new_out[-1] = f"{length:4}{f',{JUMP_KEY}' if HOLD_JUMP else ''},{
-                ELYTRA_HOTKEY},F,{angle}"
+            new_out[-1] = f"{length:4}{f',{JUMP_KEY}' if HOLD_JUMP else ''},{ELYTRA_HOTKEY},F,{angle}"
         else:
             new_out.append(line)
 
@@ -78,7 +60,7 @@ def find_best_vertical_input(initial_angle: float, initial_speed: float, facing:
     - `initial_speed` : the initial speed of the elytra.
     - `facing` the facing direction."""
 
-    maxAngleChange = DELTA_TIME * MAX_ANGLE_CHANGE_INV_SPEED_FACTOR / initial_speed
+    maxAngleChange = maxAngleChangeFormula(initial_speed)
 
     angle_min = 0
     # if we're moving "down" but above the stable angle

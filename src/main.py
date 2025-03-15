@@ -15,10 +15,7 @@ def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Fac
     c_angle, c_speed = initial_angle, initial_speed
     frame_data = []
     for _ in range(frames):
-        if c_angle >= 90 + STABLE_ANGLE_DEG and c_speed <= MAX_SPEED:
-            angle = 0.0
-        else:
-            angle = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
+        angle = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
 
         c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle)
         frame_data.append(angle)
