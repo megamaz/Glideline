@@ -1,5 +1,6 @@
 from math import atan2, sqrt, sin, cos
 from tkinter import messagebox
+from simulator import State
 from constants import *
 from utilities import *
 import tkinter.ttk as ttk
@@ -11,11 +12,11 @@ import clipboard
 import pygubu
 import os
 
-def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Facings, frames: int) -> list[float]:
-    c_angle, c_speed = initial_angle, initial_speed
+def method_normal_pullup(init_state:State, frames: int) -> list[float]:
+    c_angle, c_speed = init_state.angle, init_state.speed
     frame_data = []
     for _ in range(frames):
-        angle = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
+        angle = optimizer.find_best_vertical_input(init_state)
 
         c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle)
         frame_data.append(angle)
@@ -23,7 +24,7 @@ def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Fac
     return frame_data
 
 
-def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, init_pos:list[float], target:list[float]) -> tuple[list[float]]:
+def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[list[float]]:
     # returns (earliest time, highest speed)
 
     frame_data_earliest = []
@@ -44,22 +45,22 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
         end_all = False
         arrived = False
         d2, d1 = 0, 0
-        pos = list(init_pos)
+        pos = [init_state.pos_x, init_state.pos_y]
         inputs_angles = []
-        current_speed, current_angle = initial_speed, initial_angle
+        current_speed, current_angle = init_state.speed, init_state.angle
         f = 0
         midpoint = 0
 
         # Level out before starting algorithm
         if current_angle > 90:
-            frame_data = method_normal_pullup(current_angle, current_speed, facing, 200)
+            frame_data = method_normal_pullup(init_state, 200)
         else:
             frame_data = [90,] * 100
         
         delay = -1
         for i in range(200):
             current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
+            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * init_state.facing.value
             pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
             inputs_angles.append(frame_data[i])
             f += 1
@@ -68,13 +69,13 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
                 break
             
         # First half of flight path
-        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, 0)
+        frame_data = method_manual_wiggle(init_state, 200, H, S, 0)
         for i in range(200):
-            if pos[0] * facing.value > midpoint * facing.value:
+            if pos[0] * init_state.facing.value > midpoint * init_state.facing.value:
                 break
         
             current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
+            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * init_state.facing.value
             pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
             inputs_angles.append(frame_data[i])
             f += 1
@@ -86,10 +87,10 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
         # Second half of flight path
         # The offset is equal to the VERTICAL pullup
         # This is to ensure that we properly reverse the ratio and start on horizontal rather than vertical
-        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, S, H, H)
+        frame_data = method_manual_wiggle(init_state, 200, S, H, H)
         for i in range(200):
             current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
+            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * init_state.facing.value
             pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
             inputs_angles.append(frame_data[i])
             f += 1
@@ -97,7 +98,7 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
             if dist(pos, target) <= current_speed * DELTA_TIME:
                 arrived = True
                 break
-            if pos[0] * facing.value > target[0] * facing.value:
+            if pos[0] * init_state.facing.value > target[0] * init_state.facing.value:
                 break
         
         # If we're arrived do some math shenanigans to try some other ratios
@@ -112,7 +113,7 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
                 best_time = f
                 frame_data_earliest = list(inputs_angles)
             
-            if target[1] < init_pos[1]: # target is above us
+            if target[1] < init_state.pos_y: # target is above us
                 init_H += 1
                 H = init_H
                 S = 1
@@ -155,7 +156,7 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
     return frame_data_fastest, frame_data_earliest
 
 
-def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Facings, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
+def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
     wiggling = False  # I have some really silly variable names
     # False means we're stabilizing, True means we're going horizontal
     wiggle_countdown = wiggle_vertical
@@ -172,13 +173,13 @@ def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Fac
                 wiggle_countdown = wiggle_vertical
 
     frame_data = []
-    c_angle, c_speed = initial_angle, initial_speed
+    c_angle, c_speed = init_state.angle, init_state.speed
     for f in range(frames):
         angle_hold = 0
         if wiggling:
-            angle_hold = 90.0 if facing == Facings.Right else 270.0
+            angle_hold = 90.0 if init_state.facing == Facings.Right else 270.0
         else:
-            angle_hold = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
+            angle_hold = optimizer.find_best_vertical_input(init_state)
 
         frame_data.append(angle_hold)
         c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle_hold)
@@ -247,27 +248,7 @@ class Glideline:
 
         hotkey = self.builder.get_variable("hotkey").get()
 
-        gamestate_data = gamestate_box.get("1.0", "end").rstrip().splitlines()
-
-        speedIndex = [1 if x.startswith(
-            "Speed") else 0 for x in gamestate_data].index(1)
-        speedString = gamestate_data[speedIndex][len("Speed: "):]
-        speedX = float(speedString.split(", ")[0])
-        speedY = float(speedString.split(", ")[1])
-        # flip the x speed if facing left
-        facing = Facings.Left if speedX < 0 else Facings.Right
-
-        initial_speed = sqrt((speedX**2) + (speedY**2))
-        initial_angle = (
-            ((atan2(speedY, speedX * facing.value) * RAD_TO_DEG) + 90) + 360) % 360
-
-        posIndex = [1 if x.startswith(
-            "Pos") else 0 for x in gamestate_data].index(1)
-        posString = gamestate_data[posIndex][len("Pos: "):]
-        position = [
-            float(posString.split(", ")[0]),
-            float(posString.split(", ")[1])
-        ]
+        gamestate_data = State(gamestate_box.get("1.0", "end"))
 
         # get manual wiggle data
         wiggle_horizontal = self.builder.get_variable("wiggle_horizontal").get()
@@ -276,12 +257,12 @@ class Glideline:
 
         if active_method == 0:  # normal pullup
             frame_data = method_normal_pullup(
-                initial_angle, initial_speed, facing, frame_count)
+                gamestate_data.angle, frame_count)
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
         elif active_method == 1:  # megajoule method
             mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
-            self.input_data_mj[0], self.input_data_mj[1] = method_megajoule(initial_angle, initial_speed, facing, frame_count, position, target)
+            self.input_data_mj[0], self.input_data_mj[1] = method_megajoule(gamestate_data, frame_count, target)
             # mj might not arrive at the target
             # need to account for that
             # if it doesn't, then both input_data_mj[0] and [1] will be empty
@@ -292,7 +273,7 @@ class Glideline:
             self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
 
         elif active_method == 2:  # manual wiggle
-            frame_data = method_manual_wiggle(initial_angle, initial_speed, facing, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
+            frame_data = method_manual_wiggle(gamestate_data, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
     def set_output_text(self, text):

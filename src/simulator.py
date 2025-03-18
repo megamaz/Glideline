@@ -1,4 +1,5 @@
 from utilities import *
+from math import atan2
 
 def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
     """Simulates elytra speed and angle changes. Does not take stable_timer into account.
@@ -33,3 +34,36 @@ def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
             new_speed = Approach(initial_speed, MAX_SPEED, DELTA_TIME * ACCEL * abs(yInput))
 
     return new_angle, new_speed
+
+class State:
+    speed:float
+    angle:float
+    facing:Facings
+    pos_x:float
+    pos_y:float
+
+    wind_x:float
+    wind_y:float
+
+    def __init__(self, st_string:str):
+        """Parses a CelesteTAS State string as a State object."""
+        gamestate_data = st_string.strip().splitlines()
+        speedIndex = [1 if x.startswith(
+            "Speed") else 0 for x in gamestate_data].index(1)
+        speedString = gamestate_data[speedIndex][len("Speed: "):]
+        speedX = float(speedString.split(", ")[0])
+        speedY = float(speedString.split(", ")[1])
+        # flip the x speed if facing left
+        self.facing = Facings.Left if speedX < 0 else Facings.Right
+
+        self.speed = sqrt((speedX**2) + (speedY**2))
+        self.angle = (
+            ((atan2(speedY, speedX * self.facing.value) * RAD_TO_DEG) + 90) + 360) % 360
+
+        posIndex = [1 if x.startswith(
+            "Pos") else 0 for x in gamestate_data].index(1)
+        posString = gamestate_data[posIndex][len("Pos: "):]
+        self.pos_x, self.pos_y = (
+            float(posString.split(", ")[0]),
+            float(posString.split(", ")[1])
+        )
