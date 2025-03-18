@@ -75,6 +75,7 @@ def find_best_vertical_input(state:simulator.State) -> float:
             # simulate in-game speed changes
             new_angle, new_speed = simulator.simulate(state.angle, state.speed, angle)
             ySpeed = new_speed * -sin((90 - new_angle) * DEG_TO_RAD)
+            ySpeed += state.wind_y
 
             # if we're flying down then we want to optimize for long-term speed
             if state.angle > 90 + STABLE_ANGLE_DEG and state.angle <= MAX_SPEED:

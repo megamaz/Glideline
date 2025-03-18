@@ -67,3 +67,11 @@ class State:
             float(posString.split(", ")[0]),
             float(posString.split(", ")[1])
         )
+
+        windIndex =[1 if x.startswith(
+            "Wind") else 0 for x in gamestate_data].index(1)
+        windString = gamestate_data[windIndex][len("Wind: "):]
+        self.wind_x, self.wind_y = (
+            float(windString.split(", ")[0])/10,
+            float(windString.split(", ")[1])/10
+        )
