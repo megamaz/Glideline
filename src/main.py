@@ -256,8 +256,7 @@ class Glideline:
         wiggle_offset = self.builder.get_variable("wiggle_offset").get()
 
         if active_method == 0:  # normal pullup
-            frame_data = method_normal_pullup(
-                gamestate_data.angle, frame_count)
+            frame_data = method_normal_pullup(gamestate_data, frame_count)
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
         elif active_method == 1:  # megajoule method
