@@ -7,18 +7,16 @@ import tkinter.ttk as ttk
 import tkinter as tk
 import webbrowser
 import optimizer
-import simulator
 import clipboard
 import pygubu
 import os
 
 def method_normal_pullup(init_state:State, frames: int) -> list[float]:
-    c_angle, c_speed = init_state.angle, init_state.speed
+    state = init_state.clone_state()
     frame_data = []
     for _ in range(frames):
         angle = optimizer.find_best_vertical_input(init_state)
-
-        c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle)
+        state.step(angle)
         frame_data.append(angle)
 
     return frame_data
@@ -41,42 +39,38 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
     last_diff = 0
     closest = float("inf")
     options = 0
+    state = init_state.clone_state()
     while True:
         end_all = False
         arrived = False
         d2, d1 = 0, 0
-        pos = [init_state.pos_x, init_state.pos_y]
         inputs_angles = []
-        current_speed, current_angle = init_state.speed, init_state.angle
         f = 0
         midpoint = 0
 
         # Level out before starting algorithm
-        if current_angle > 90:
+        if state.angle > 90:
             frame_data = method_normal_pullup(init_state, 200)
         else:
             frame_data = [90,] * 100
         
         delay = -1
         for i in range(200):
-            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * init_state.facing.value
-            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            state.step(frame_data[i])
+            
             inputs_angles.append(frame_data[i])
             f += 1
-            if abs(90.0 - current_angle) <= 1.0 and delay < 0:
-                midpoint = (pos[0] + target[0]) / 2
+            if abs(90.0 - state.angle) <= 1.0 and delay < 0:
+                midpoint = (state.pos_x + target[0]) / 2
                 break
             
         # First half of flight path
         frame_data = method_manual_wiggle(init_state, 200, H, S, 0)
         for i in range(200):
-            if pos[0] * init_state.facing.value > midpoint * init_state.facing.value:
+            if state.pos_x * state.facing.value > midpoint * init_state.facing.value:
                 break
-        
-            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * init_state.facing.value
-            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+                
+            state.step(frame_data[i])
             inputs_angles.append(frame_data[i])
             f += 1
 
@@ -89,24 +83,22 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
         # This is to ensure that we properly reverse the ratio and start on horizontal rather than vertical
         frame_data = method_manual_wiggle(init_state, 200, S, H, H)
         for i in range(200):
-            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * init_state.facing.value
-            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            state.step(frame_data[i])
             inputs_angles.append(frame_data[i])
             f += 1
 
-            if dist(pos, target) <= current_speed * DELTA_TIME:
+            if dist([state.pos_x, state.pos_y], target) <= state.speed * DELTA_TIME:
                 arrived = True
                 break
-            if pos[0] * init_state.facing.value > target[0] * init_state.facing.value:
+            if state.pos_x * init_state.facing.value > target[0] * init_state.facing.value:
                 break
         
         # If we're arrived do some math shenanigans to try some other ratios
         if arrived:
-            print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in f{f}, speed={current_speed}")
-            if current_speed > best_speed:
+            print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in f{f}, speed={state.speed}")
+            if state.speed > best_speed:
                 closest = -1
-                best_speed = current_speed
+                best_speed = state.speed
                 frame_data_fastest = list(inputs_angles)
             if f < best_time:
                 closest = -1
@@ -127,10 +119,10 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
                 under_ratio = None
         else:
             # print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d2} failed: Y diff from target {abs(pos[1] - target[1])} ({'undershot' if pos[1] > target[1] else 'overshot'})")
-            if abs(pos[1] - target[1]) < closest:
-                closest = abs(pos[1] - target[1])
+            if abs(state.pos_y - target[1]) < closest:
+                closest = abs(state.pos_y - target[1])
 
-            if pos[1] > target[1]:
+            if state.pos_y > target[1]:
                 under_ratio = (H, S)
                 S += 1
             else:
@@ -145,12 +137,13 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
                 under_ratio = None
                 over_ratio = None
             
-            if abs(pos[1] - target[1]) == last_diff:
+            if abs(state.pos_y - target[1]) == last_diff:
                 break
 
-            last_diff = abs(pos[1] - target[1])
+            last_diff = abs(state.pos_y - target[1])
             
         options += 1
+        state.reset_state()
 
     print(f"Done, tried {options} ratios")
     return frame_data_fastest, frame_data_earliest
@@ -172,8 +165,9 @@ def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, 
             else:
                 wiggle_countdown = wiggle_vertical
 
+    state = init_state.clone_state()
+
     frame_data = []
-    c_angle, c_speed = init_state.angle, init_state.speed
     for f in range(frames):
         angle_hold = 0
         if wiggling:
@@ -182,7 +176,7 @@ def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, 
             angle_hold = optimizer.find_best_vertical_input(init_state)
 
         frame_data.append(angle_hold)
-        c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle_hold)
+        state.step(angle_hold)
 
         wiggle_countdown -= 1
         if wiggle_countdown == 0:

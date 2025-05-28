@@ -1,5 +1,5 @@
 from utilities import *
-from math import atan2
+from math import atan2, sin, cos
 
 def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
     """Simulates elytra speed and angle changes. Does not take stable_timer into account.
@@ -45,6 +45,8 @@ class State:
     wind_x:float
     wind_y:float
 
+    init_state:tuple
+
     def __init__(self, st_string:str):
         """Parses a CelesteTAS State string as a State object."""
         gamestate_data = st_string.strip().splitlines()
@@ -75,3 +77,25 @@ class State:
             float(windString.split(", ")[0])/10,
             float(windString.split(", ")[1])/10
         )
+
+        self.init_state = (self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, self.facing.value)
+    
+    @classmethod
+    def from_direct(cls, pos_x:float, pos_y:float, speed:float, angle:float, wind_x:float, wind_y:float, facing:int) -> "State":
+        new = State.__new__(State)
+        new.pos_x, new.pos_y, new.speed, new.angle, new.wind_x, new.wind_y, new.facing = pos_x, pos_y, speed, angle, wind_x, wind_y, Facings(facing)
+        new.init_state = (pos_x, pos_y, speed, angle, wind_x, wind_y, facing)
+        return new
+    
+    def clone_state(self) -> "State":
+        return State.from_direct(*self.init_state)
+
+    def step(self, angle:float):
+        self.angle, self.speed = simulate(self.angle, self.speed, angle)
+        
+        self.pos_x += (self.speed * sin(self.angle * DEG_TO_RAD) + self.wind_x) * DELTA_TIME * self.facing.value
+        self.pos_y -= (self.speed * cos(self.angle * DEG_TO_RAD) + self.wind_y) * DELTA_TIME
+    
+    def reset_state(self):
+        self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, facing_val = self.init_state
+        self.facing = Facings(facing_val)
