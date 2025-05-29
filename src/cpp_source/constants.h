@@ -1,6 +1,6 @@
 #pragma once
 
-inline constexpr static double pi = 3.1415926535;
+inline constexpr static double pi = 3.141592653589793238462643383279; // should be enough yeah?
 inline constexpr static double delta_time = 0.016666699201;
 inline constexpr static double max_angle_change_inv_speed_factor = 480.0;
 inline constexpr static double min_speed = 64.0;

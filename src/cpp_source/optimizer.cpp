@@ -28,7 +28,7 @@ double Optimizer::find_best_vertical_input(double initial_angle, double initial_
     int iteration = 1;
 
     bool end_prematurely = false;
-    while (iteration < 10) {
+    while (iteration < 12) {
         for (double angle = angle_min; angle < angle_max; angle += step_size) {
             double test_angle = angle;
             if (initial_angle < 180.0) {

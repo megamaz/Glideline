@@ -99,9 +99,9 @@ class State:
     def step(self, angle:float):
         self.angle, self.speed = simulate(self.angle, self.speed, angle)
         
-        self.pos_x += (self.speed * sin(self.angle * DEG_TO_RAD) + self.wind_x) * DELTA_TIME * self.facing.value
-        self.pos_y -= (self.speed * cos(self.angle * DEG_TO_RAD) + self.wind_y) * DELTA_TIME
-        logging.debug(f"{id(self)} stepped: angle={self.angle}, speed={self.speed}")
+        self.pos_x += self.speed * sin(self.angle * DEG_TO_RAD) * DELTA_TIME * self.facing.value
+        self.pos_y -= self.speed * cos(self.angle * DEG_TO_RAD) * DELTA_TIME
+        logging.debug(f"{id(self)} stepped: pos=[{self.pos_x}, {self.pos_y}] angle={self.angle}, speed={self.speed}, input={angle}")
     
     def reset_state(self):
         logging.debug(f"{id(self)} reset to {self.init_state}")

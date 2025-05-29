@@ -45,16 +45,19 @@ def frameDataToInputs(frame_data, hotkey:str, precision:int=4) -> str:
     return "\n".join(sanitizer(out))
 
 
-def find_best_vertical_input(state:simulator.State) -> float:
-    """Finds the best input (in feather degrees) to maximize vertical velocity given the frame."""
+def find_best_vertical_input(initial_angle: float, initial_speed: float, facing: Facings) -> float:
+    """Finds the best input (in feather degrees) to maximize vertical velocity given the frame.
+    - `initial_angle` : the initial flying angle in feather degrees.
+    - `initial_speed` : the initial speed of the elytra.
+    - `facing` the facing direction."""
 
-    maxAngleChange = maxAngleChangeFormula(state.speed)
+    maxAngleChange = DELTA_TIME * MAX_ANGLE_CHANGE_INV_SPEED_FACTOR / initial_speed
 
     angle_min = 0
     # if we're moving "down" but above the stable angle
     # then we don't want to optimize for immediate height
-    if state.angle > 90 and state.angle < 90 + STABLE_ANGLE_DEG:
-        angle_min = (acos((STABLE_ANGLE - (((state.angle - 90) * pi)/180.0))))*RAD_TO_DEG - (maxAngleChange * RAD_TO_DEG)
+    if initial_angle > 90 and initial_angle < 90 + STABLE_ANGLE_DEG:
+        angle_min = (acos((STABLE_ANGLE - (((initial_angle - 90) * pi)/180.0))))*RAD_TO_DEG - (maxAngleChange * RAD_TO_DEG)
     angle_max = 180
 
     init_min_angle = angle_min
@@ -70,15 +73,14 @@ def find_best_vertical_input(state:simulator.State) -> float:
     end_prematurely = False
     while iteration < PRECISION_COMPUTE:
         for angle in frange(angle_min, angle_max, step_size):
-            if state.angle < 180:
+            if initial_angle < 180:
                 angle = angle_max - angle + angle_min
             # simulate in-game speed changes
-            new_angle, new_speed = simulator.simulate(state.angle, state.speed, angle)
+            new_angle, new_speed = simulator.simulate(initial_angle, initial_speed, angle)
             ySpeed = new_speed * -sin((90 - new_angle) * DEG_TO_RAD)
-            ySpeed += state.wind_y
 
             # if we're flying down then we want to optimize for long-term speed
-            if state.angle > 90 + STABLE_ANGLE_DEG and state.angle <= MAX_SPEED:
+            if initial_angle > 90 + STABLE_ANGLE_DEG and initial_speed <= MAX_SPEED:
                 angle = 0
                 end_prematurely = True
 
@@ -106,11 +108,11 @@ def find_best_vertical_input(state:simulator.State) -> float:
 
         iteration += 1
 
-    state.angle = best_angleF
-    state.speed = best_total_speed
+    initial_angle = best_angleF
+    initial_speed = best_total_speed
 
     angle_hold = best_angleI
-    if state.facing == Facings.Left:
+    if facing == Facings.Left:
         angle_hold = ((-best_angleI) % 360)
 
     return angle_hold
