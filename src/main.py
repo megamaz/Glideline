@@ -234,10 +234,10 @@ def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, 
 
 def method_agent(init_state:State, frames:int, target:list[float]) -> list[float]:
     """Uses C++ and runs an agent method."""
-    agent_amount = 2
-    epochs = 4
+    agent_amount = 20
+    epochs = 2500
     mutation_rate = 7
-    learning_rate = 50
+    learning_rate = 25
     speed_multiplier = 2.0
     dist_multiplier = -1.5
     time_multiplier = -2.0

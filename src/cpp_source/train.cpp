@@ -59,7 +59,7 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
                 double input = agent->get_next_input();
                 agent->state.step(input);
                 // std::cout << "new pos_x=" + std::to_string(agent->state.pos_x) + " pos_y=" + std::to_string(agent->state.pos_y) + " speed=" + std::to_string(agent->state.speed) + " angle=" + std::to_string(agent->state.angle) << std::endl;
-                logger.attr("debug")("Agent #" + std::to_string(a + 1) + " new pos_x=" + std::to_string(agent->state.pos_x) + " pos_y=" + std::to_string(agent->state.pos_y) + " speed=" + std::to_string(agent->state.speed) + " angle=" + std::to_string(agent->state.angle) + " input=" + std::to_string(input));
+                // logger.attr("debug")("Agent #" + std::to_string(a + 1) + " new pos_x=" + std::to_string(agent->state.pos_x) + " pos_y=" + std::to_string(agent->state.pos_y) + " speed=" + std::to_string(agent->state.speed) + " angle=" + std::to_string(agent->state.angle) + " input=" + std::to_string(input));
                 if (agent->state.pos_x >= target[0])
                 {
                     double score = (agent->state.speed * speed_multiplier) + (std::abs(agent->state.pos_y - target[1]) * distance_multiplier) + (frames * frames_multiplier);
@@ -73,7 +73,7 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
                 agent_scores[a] = -inf;
             }
             // std::cout << "Agent #" << a + 1 << " finished at [" << agent->state.pos_x << ", " << agent->state.pos_y << "] speed=" << agent->state.speed << " with score=" << agent_scores[a] << std::endl;
-            logger.attr("debug")("Agent #" + std::to_string(a + 1) + " finished at [" + std::to_string(agent->state.pos_x) + ", " + std::to_string(agent->state.pos_y) + "] speed=" + std::to_string(agent->state.speed) + " with score=" + std::to_string(agent_scores[a]));
+            // logger.attr("debug")("Agent #" + std::to_string(a + 1) + " finished at [" + std::to_string(agent->state.pos_x) + ", " + std::to_string(agent->state.pos_y) + "] speed=" + std::to_string(agent->state.speed) + " with score=" + std::to_string(agent_scores[a]));
         }
 
         // sort agents
