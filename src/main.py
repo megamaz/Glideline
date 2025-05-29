@@ -55,12 +55,12 @@ class Agent:
             if ind % 2 == 1:
                 for _ in range(val):
                     angle = optimizer.find_best_vertical_input(self.state)
-                    # self.state.step(angle)
+                    self.state.step(angle)
                     yield angle
             else:
                 for _ in range(val):
                     angle = (90.0 if self.state.facing == Facings.Right else 270.0)
-                    # self.state.step(angle)
+                    self.state.step(angle)
                     yield angle
 
     def copy(self):
@@ -109,7 +109,7 @@ def setup_logging():
     string_format = "[%(asctime)s.%(msecs)03d %(levelname)s %(module)s.%(funcName)s]: %(message)s"
     string_datefmt = "%H:%M:%S"
     console = logging.StreamHandler()
-    file = logging.FileHandler("./_latest.log", "w")
+    file = logging.FileHandler("../_latest.log", "w")
     
     file.setFormatter(logging.Formatter(string_format, datefmt=string_datefmt))
     console.setFormatter(ColorFormatter(string_format, datefmt=string_datefmt))
@@ -309,15 +309,16 @@ def method_agent(init_state:State, frames:int, target:list[float]) -> list[float
     epochs = 2500
     mutation_rate = 7
     learning_rate = 50
-    speed_multiplier = 2.5
-    dist_multiplier = -1.0
+    speed_multiplier = 1.4
+    dist_multiplier = -2.0
     time_multiplier = -2.0
     keep_top = 10
     result = agent_module.train(agent_amount, epochs, mutation_rate, learning_rate, *init_state.init_state, *target, speed_multiplier, dist_multiplier, time_multiplier, keep_top)
+    logging.debug(f"Result timings: {result}")
 
     agent = Agent.__new__(Agent)
     agent.timings = result
-    agent.state = init_state
+    agent.state = init_state.clone_state()
     frame_data = []
     for i in agent.generate_inputs():
         agent.state.step(i)
@@ -326,6 +327,8 @@ def method_agent(init_state:State, frames:int, target:list[float]) -> list[float
             break
     else:
         logging.warning("Agent failed to arrive.")
+    
+    logging.debug(f"Python simulated Agent finished at [{agent.state.pos_x}, {agent.state.pos_y}] with speed={agent.state.speed}")
 
     return frame_data
 

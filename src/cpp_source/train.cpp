@@ -72,6 +72,7 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
                 agent_scores[a] = -inf;
             }
             // std::cout << "Agent #" << a + 1 << " finished at [" << agent->state.pos_x << ", " << agent->state.pos_y << "] speed=" << agent->state.speed << " with score=" << agent_scores[a] << std::endl;
+            logger.attr("debug")("Agent #" + std::to_string(a + 1) + " finished at [" + std::to_string(agent->state.pos_x) + ", " + std::to_string(agent->state.pos_y) + "] speed=" + std::to_string(agent->state.speed) + " with score=" + std::to_string(agent_scores[a]));
         }
 
         // sort agents
