@@ -1,9 +1,10 @@
 from constants import *
 from math import sin, asin, sqrt
+import logging
 
 def maxAngleChangeFormula(speed):
     if speed == 0.0:
-        print("[Warning]: Applying maxAngleChangeFormula to speed=0. Returning infinity.")
+        logging.warning("Running maxAngleChangeFormula on speed=0, returning +inf.")
         return float("inf")
     return DELTA_TIME * MAX_ANGLE_CHANGE_INV_SPEED_FACTOR / speed
 

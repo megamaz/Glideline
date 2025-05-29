@@ -8,10 +8,34 @@ import tkinter as tk
 import webbrowser
 import optimizer
 import clipboard
+import logging
 import pygubu
+import sys
 import os
 
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        'DEBUG': '\033[94m',   # blue
+        'INFO': '\033[92m',    # green
+        'WARNING': '\033[93m', # yellow
+        'ERROR': '\033[91m',   # red
+        'CRITICAL': '\033[95m' # magenta
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, self.RESET)
+        msg = super().format(record)
+        return f"{color}{msg}{self.RESET}"
+
+level = logging.DEBUG if "--debug" in sys.argv else logging.INFO
+handler = logging.StreamHandler()
+handler.setFormatter(ColorFormatter("[%(asctime)s %(levelname)s %(funcName)s]: %(message)s"))
+logging.basicConfig(level=level, handlers=[handler])
+
+
 def method_normal_pullup(init_state:State, frames: int) -> list[float]:
+    logging.info("Running normal pullup method")
     state = init_state.clone_state()
     frame_data = []
     for _ in range(frames):
@@ -23,6 +47,7 @@ def method_normal_pullup(init_state:State, frames: int) -> list[float]:
 
 
 def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[list[float]]:
+    logging.info("Running megajoule method")
     # returns (earliest time, highest speed)
 
     frame_data_earliest = []
@@ -95,7 +120,7 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
         
         # If we're arrived do some math shenanigans to try some other ratios
         if arrived:
-            print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in f{f}, speed={state.speed}")
+            logging.info(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in {f}f, speed={state.speed}")
             if state.speed > best_speed:
                 closest = -1
                 best_speed = state.speed
@@ -118,7 +143,6 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
                 over_ratio = None
                 under_ratio = None
         else:
-            # print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d2} failed: Y diff from target {abs(pos[1] - target[1])} ({'undershot' if pos[1] > target[1] else 'overshot'})")
             if abs(state.pos_y - target[1]) < closest:
                 closest = abs(state.pos_y - target[1])
 
@@ -145,11 +169,12 @@ def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[
         options += 1
         state.reset_state()
 
-    print(f"Done, tried {options} ratios")
+    logging.info(f"Done, tried {options} ratios")
     return frame_data_fastest, frame_data_earliest
 
 
 def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
+    logging.info("Running manual wiggle method")
     wiggling = False  # I have some really silly variable names
     # False means we're stabilizing, True means we're going horizontal
     wiggle_countdown = wiggle_vertical
@@ -211,7 +236,7 @@ class Glideline:
 
 
     def default_setup(self):
-        print("Running default window setup")
+        logging.info("Running default window setup")
         method: ttk.Combobox = self.builder.get_object('method')
         method.current(0)
 
@@ -222,6 +247,7 @@ class Glideline:
         # check if first time running
         first_launch = not os.path.exists("./firstlaunch")
         if first_launch:
+            logging.info("Detected first launch")
             open("./firstlaunch", "w").close()
             self.mainwindow.after(0, self.info)
         self.mainwindow.mainloop()
@@ -230,6 +256,7 @@ class Glideline:
         method: ttk.Combobox = self.builder.get_object('method')
         active_method = method.current()
         self.last_method = active_method
+        logging.info(f"Optimizer launched on method {active_method}")
 
         gamestate_box: tk.Entry = self.builder.get_object("gamestate")
 
@@ -241,8 +268,15 @@ class Glideline:
         ]
 
         hotkey = self.builder.get_variable("hotkey").get()
-
-        gamestate_data = State(gamestate_box.get("1.0", "end"))
+        try:
+            gamestate_data = State(gamestate_box.get("1.0", "end"))
+        except ValueError as e:
+            logging.error(f"Couldn't load state: State text is missing required information")
+            return
+        except Exception as e:
+            logging.error(f"Couldn't load state: '{e}'")
+        
+        logging.info("Loaded state successfully")
 
         # get manual wiggle data
         wiggle_horizontal = self.builder.get_variable("wiggle_horizontal").get()

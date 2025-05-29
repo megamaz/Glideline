@@ -70,13 +70,19 @@ class State:
             float(posString.split(", ")[1])
         )
 
+        
         windIndex =[1 if x.startswith(
-            "Wind") else 0 for x in gamestate_data].index(1)
-        windString = gamestate_data[windIndex][len("Wind: "):]
-        self.wind_x, self.wind_y = (
-            float(windString.split(", ")[0])/10,
-            float(windString.split(", ")[1])/10
-        )
+            "Wind") else 0 for x in gamestate_data]
+        if 1 in windIndex:
+            logging.info("Found wind data.")
+            windString = gamestate_data[windIndex.index(1)][len("Wind: "):]
+            self.wind_x, self.wind_y = (
+                float(windString.split(", ")[0])/10,
+                float(windString.split(", ")[1])/10
+            )
+        else:
+            self.wind_x, self.wind_y = 0, 0
+            logging.warning("Couldn't find wind information. Make sure that `Wind: {Level.Wind}` is in the Custom HUD Info.")
 
         self.init_state = (self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, self.facing.value)
     
@@ -95,7 +101,9 @@ class State:
         
         self.pos_x += (self.speed * sin(self.angle * DEG_TO_RAD) + self.wind_x) * DELTA_TIME * self.facing.value
         self.pos_y -= (self.speed * cos(self.angle * DEG_TO_RAD) + self.wind_y) * DELTA_TIME
+        logging.debug(f"{id(self)} stepped: angle={self.angle}, speed={self.speed}")
     
     def reset_state(self):
+        logging.debug(f"{id(self)} reset to {self.init_state}")
         self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, facing_val = self.init_state
         self.facing = Facings(facing_val)
