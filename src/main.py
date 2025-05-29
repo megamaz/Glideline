@@ -55,12 +55,12 @@ class Agent:
             if ind % 2 == 1:
                 for _ in range(val):
                     angle = optimizer.find_best_vertical_input(self.state)
-                    self.state.step(angle)
+                    # self.state.step(angle)
                     yield angle
             else:
                 for _ in range(val):
                     angle = (90.0 if self.state.facing == Facings.Right else 270.0)
-                    self.state.step(angle)
+                    # self.state.step(angle)
                     yield angle
 
     def copy(self):

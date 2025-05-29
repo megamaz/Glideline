@@ -8,11 +8,15 @@ ElytraState::ElytraState()
 {
     this->pos_x = 0;
     this->pos_y = 0;
+    this->wind_x = 0;
+    this->wind_y = 0;
     this->speed = 0;
     this->angle = 0;
     this->facing = 0;
     this->init_pos_x = 0;
     this->init_pos_y = 0;
+    this->init_wind_x = 0;
+    this->init_wind_y = 0;
     this->init_speed = 0;
     this->init_angle = 0;
     this->init_facing = 0;
@@ -42,6 +46,8 @@ void ElytraState::reset_state()
 {
     this->pos_x = this->init_pos_x;
     this->pos_y = this->init_pos_y;
+    this->wind_x = this->init_wind_x;
+    this->wind_y = this->init_wind_y;
     this->speed = this->init_speed;
     this->angle = this->init_angle;
     this->facing = this->init_facing;
@@ -51,12 +57,16 @@ ElytraState::ElytraState(const ElytraState& other)
 {
     pos_x = other.pos_x;
     pos_y = other.pos_y;
+    wind_x = other.wind_x;
+    wind_y = other.wind_y;
     speed = other.speed;
     angle = other.angle;
     facing = other.facing;
 
     init_pos_x = other.init_pos_x;
     init_pos_y = other.init_pos_y;
+    init_wind_x = other.init_wind_x;
+    init_wind_y = other.init_wind_y;
     init_speed = other.init_speed;
     init_angle = other.init_angle;
     init_facing = other.init_facing;
@@ -73,6 +83,6 @@ void ElytraState::step(double i)
     this->angle = result[0];
     this->speed = result[1];
 
-    this->pos_x += (this->speed * std::sin(this->angle * deg_to_rad) + this->wind_x) * delta_time * this->facing;
-    this->pos_y -= (this->speed * std::cos(this->angle * deg_to_rad) + this->wind_y) * delta_time;
+    this->pos_x += ((this->speed * std::sin(this->angle * deg_to_rad)) + this->wind_x) * delta_time * this->facing;
+    this->pos_y -= ((this->speed * std::cos(this->angle * deg_to_rad)) + this->wind_y) * delta_time;
 }
