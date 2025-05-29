@@ -1,29 +1,69 @@
 from math import atan2, sqrt, sin, cos
 from tkinter import messagebox
+from simulator import State
 from constants import *
 from utilities import *
 import tkinter.ttk as ttk
 import tkinter as tk
 import webbrowser
 import optimizer
-import simulator
 import clipboard
+import logging
 import pygubu
+import sys
 import os
 
-def method_normal_pullup(initial_angle: float, initial_speed: float, facing: Facings, frames: int) -> list[float]:
-    c_angle, c_speed = initial_angle, initial_speed
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        'DEBUG': '\033[94m',   # blue
+        'INFO': '', # regular
+        'WARNING': '\033[93m', # yellow
+        'ERROR': '\033[91m',   # red
+        'CRITICAL': '\033[95m' # magenta
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, self.RESET)
+        msg = super().format(record)
+        return f"{color}{msg}{self.RESET}"
+
+def setup_logging():
+    print("Setting up Python logger")
+    level = logging.DEBUG if "--debug" in sys.argv else logging.INFO
+
+    string_format = "[%(asctime)s.%(msecs)03d %(levelname)s %(name)s.%(funcName)s]: %(message)s"
+    string_datefmt = "%H:%M:%S"
+    console = logging.StreamHandler()
+    file = logging.FileHandler("./_latest.log", "w")
+    
+    file.setFormatter(logging.Formatter(string_format, datefmt=string_datefmt))
+    console.setFormatter(ColorFormatter(string_format, datefmt=string_datefmt))
+    
+    file.setLevel(logging.DEBUG)
+    console.setLevel(level)
+
+    logging.basicConfig(handlers=[console, file])
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.info("Python logger setup, sending to C++")
+
+    # agent_module.setup_logger(logging)
+
+
+def method_normal_pullup(init_state:State, frames: int) -> list[float]:
+    logging.info("Running normal pullup method")
+    state = init_state.clone_state()
     frame_data = []
     for _ in range(frames):
-        angle = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
-
-        c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle)
+        angle = optimizer.find_best_vertical_input(init_state)
+        state.step(angle)
         frame_data.append(angle)
 
     return frame_data
 
 
-def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, frames:int, init_pos:list[float], target:list[float]) -> tuple[list[float]]:
+def method_megajoule(init_state:State, frames:int, target:list[float]) -> tuple[list[float]]:
+    logging.info("Running megajoule method")
     # returns (earliest time, highest speed)
 
     frame_data_earliest = []
@@ -40,42 +80,38 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
     last_diff = 0
     closest = float("inf")
     options = 0
+    state = init_state.clone_state()
     while True:
         end_all = False
         arrived = False
         d2, d1 = 0, 0
-        pos = list(init_pos)
         inputs_angles = []
-        current_speed, current_angle = initial_speed, initial_angle
         f = 0
         midpoint = 0
 
         # Level out before starting algorithm
-        if current_angle > 90:
-            frame_data = method_normal_pullup(current_angle, current_speed, facing, 200)
+        if state.angle > 90:
+            frame_data = method_normal_pullup(init_state, 200)
         else:
             frame_data = [90,] * 100
         
         delay = -1
         for i in range(200):
-            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
-            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            state.step(frame_data[i])
+            
             inputs_angles.append(frame_data[i])
             f += 1
-            if abs(90.0 - current_angle) <= 1.0 and delay < 0:
-                midpoint = (pos[0] + target[0]) / 2
+            if abs(90.0 - state.angle) <= 1.0 and delay < 0:
+                midpoint = (state.pos_x + target[0]) / 2
                 break
             
         # First half of flight path
-        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, H, S, 0)
+        frame_data = method_manual_wiggle(init_state, 200, H, S, 0)
         for i in range(200):
-            if pos[0] * facing.value > midpoint * facing.value:
+            if state.pos_x * state.facing.value > midpoint * init_state.facing.value:
                 break
-        
-            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
-            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+                
+            state.step(frame_data[i])
             inputs_angles.append(frame_data[i])
             f += 1
 
@@ -86,33 +122,31 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
         # Second half of flight path
         # The offset is equal to the VERTICAL pullup
         # This is to ensure that we properly reverse the ratio and start on horizontal rather than vertical
-        frame_data = method_manual_wiggle(current_angle, current_speed, facing, 200, S, H, H)
+        frame_data = method_manual_wiggle(init_state, 200, S, H, H)
         for i in range(200):
-            current_angle, current_speed = simulator.simulate(current_angle, current_speed, frame_data[i])
-            pos[0] += current_speed * sin(current_angle * DEG_TO_RAD) * DELTA_TIME * facing.value
-            pos[1] -= current_speed * cos(current_angle * DEG_TO_RAD) * DELTA_TIME
+            state.step(frame_data[i])
             inputs_angles.append(frame_data[i])
             f += 1
 
-            if dist(pos, target) <= current_speed * DELTA_TIME:
+            if dist([state.pos_x, state.pos_y], target) <= state.speed * DELTA_TIME:
                 arrived = True
                 break
-            if pos[0] * facing.value > target[0] * facing.value:
+            if state.pos_x * init_state.facing.value > target[0] * init_state.facing.value:
                 break
         
         # If we're arrived do some math shenanigans to try some other ratios
         if arrived:
-            print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in f{f}, speed={current_speed}")
-            if current_speed > best_speed:
+            logging.info(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d1} succeeded in {f}f, speed={state.speed}")
+            if state.speed > best_speed:
                 closest = -1
-                best_speed = current_speed
+                best_speed = state.speed
                 frame_data_fastest = list(inputs_angles)
             if f < best_time:
                 closest = -1
                 best_time = f
                 frame_data_earliest = list(inputs_angles)
             
-            if target[1] < init_pos[1]: # target is above us
+            if target[1] < init_state.pos_y: # target is above us
                 init_H += 1
                 H = init_H
                 S = 1
@@ -125,11 +159,10 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
                 over_ratio = None
                 under_ratio = None
         else:
-            # print(f"{H}f/{S}f+{d1} -> {S}f/{H}f+{d2} failed: Y diff from target {abs(pos[1] - target[1])} ({'undershot' if pos[1] > target[1] else 'overshot'})")
-            if abs(pos[1] - target[1]) < closest:
-                closest = abs(pos[1] - target[1])
+            if abs(state.pos_y - target[1]) < closest:
+                closest = abs(state.pos_y - target[1])
 
-            if pos[1] > target[1]:
+            if state.pos_y > target[1]:
                 under_ratio = (H, S)
                 S += 1
             else:
@@ -144,18 +177,20 @@ def method_megajoule(initial_angle:float, initial_speed:float, facing:Facings, f
                 under_ratio = None
                 over_ratio = None
             
-            if abs(pos[1] - target[1]) == last_diff:
+            if abs(state.pos_y - target[1]) == last_diff:
                 break
 
-            last_diff = abs(pos[1] - target[1])
+            last_diff = abs(state.pos_y - target[1])
             
         options += 1
+        state.reset_state()
 
-    print(f"Done, tried {options} ratios")
+    logging.info(f"Done, tried {options} ratios")
     return frame_data_fastest, frame_data_earliest
 
 
-def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Facings, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
+def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, wiggle_vertical: int, wiggle_offset: int) -> list[float]:
+    logging.info("Running manual wiggle method")
     wiggling = False  # I have some really silly variable names
     # False means we're stabilizing, True means we're going horizontal
     wiggle_countdown = wiggle_vertical
@@ -171,17 +206,18 @@ def method_manual_wiggle(initial_angle: float, initial_speed: float, facing: Fac
             else:
                 wiggle_countdown = wiggle_vertical
 
+    state = init_state.clone_state()
+
     frame_data = []
-    c_angle, c_speed = initial_angle, initial_speed
     for f in range(frames):
         angle_hold = 0
         if wiggling:
-            angle_hold = 90.0 if facing == Facings.Right else 270.0
+            angle_hold = 90.0 if init_state.facing == Facings.Right else 270.0
         else:
-            angle_hold = optimizer.find_best_vertical_input(c_angle, c_speed, facing)
+            angle_hold = optimizer.find_best_vertical_input(init_state)
 
         frame_data.append(angle_hold)
-        c_angle, c_speed = simulator.simulate(c_angle, c_speed, angle_hold)
+        state.step(angle_hold)
 
         wiggle_countdown -= 1
         if wiggle_countdown == 0:
@@ -216,7 +252,7 @@ class Glideline:
 
 
     def default_setup(self):
-        print("Running default window setup")
+        logging.info("Running default window setup")
         method: ttk.Combobox = self.builder.get_object('method')
         method.current(0)
 
@@ -227,6 +263,7 @@ class Glideline:
         # check if first time running
         first_launch = not os.path.exists("./firstlaunch")
         if first_launch:
+            logging.info("Detected first launch")
             open("./firstlaunch", "w").close()
             self.mainwindow.after(0, self.info)
         self.mainwindow.mainloop()
@@ -235,6 +272,7 @@ class Glideline:
         method: ttk.Combobox = self.builder.get_object('method')
         active_method = method.current()
         self.last_method = active_method
+        logging.info(f"Optimizer launched on method {active_method}")
 
         gamestate_box: tk.Entry = self.builder.get_object("gamestate")
 
@@ -246,28 +284,15 @@ class Glideline:
         ]
 
         hotkey = self.builder.get_variable("hotkey").get()
-
-        gamestate_data = gamestate_box.get("1.0", "end").rstrip().splitlines()
-
-        speedIndex = [1 if x.startswith(
-            "Speed") else 0 for x in gamestate_data].index(1)
-        speedString = gamestate_data[speedIndex][len("Speed: "):]
-        speedX = float(speedString.split(", ")[0])
-        speedY = float(speedString.split(", ")[1])
-        # flip the x speed if facing left
-        facing = Facings.Left if speedX < 0 else Facings.Right
-
-        initial_speed = sqrt((speedX**2) + (speedY**2))
-        initial_angle = (
-            ((atan2(speedY, speedX * facing.value) * RAD_TO_DEG) + 90) + 360) % 360
-
-        posIndex = [1 if x.startswith(
-            "Pos") else 0 for x in gamestate_data].index(1)
-        posString = gamestate_data[posIndex][len("Pos: "):]
-        position = [
-            float(posString.split(", ")[0]),
-            float(posString.split(", ")[1])
-        ]
+        try:
+            gamestate_data = State(gamestate_box.get("1.0", "end"))
+        except ValueError as e:
+            logging.error(f"Couldn't load state: State text is missing required information")
+            return
+        except Exception as e:
+            logging.error(f"Couldn't load state: '{e}'")
+        
+        logging.info("Loaded state successfully")
 
         # get manual wiggle data
         wiggle_horizontal = self.builder.get_variable("wiggle_horizontal").get()
@@ -275,13 +300,12 @@ class Glideline:
         wiggle_offset = self.builder.get_variable("wiggle_offset").get()
 
         if active_method == 0:  # normal pullup
-            frame_data = method_normal_pullup(
-                initial_angle, initial_speed, facing, frame_count)
+            frame_data = method_normal_pullup(gamestate_data, frame_count)
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
         elif active_method == 1:  # megajoule method
             mj_selection: ttk.Combobox = self.builder.get_object('mj_method')
-            self.input_data_mj[0], self.input_data_mj[1] = method_megajoule(initial_angle, initial_speed, facing, frame_count, position, target)
+            self.input_data_mj[0], self.input_data_mj[1] = method_megajoule(gamestate_data, frame_count, target)
             # mj might not arrive at the target
             # need to account for that
             # if it doesn't, then both input_data_mj[0] and [1] will be empty
@@ -292,7 +316,7 @@ class Glideline:
             self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
 
         elif active_method == 2:  # manual wiggle
-            frame_data = method_manual_wiggle(initial_angle, initial_speed, facing, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
+            frame_data = method_manual_wiggle(gamestate_data, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
     def set_output_text(self, text):
@@ -326,5 +350,10 @@ class Glideline:
 
 
 if __name__ == "__main__":
-    app = Glideline()
-    app.run()
+    setup_logging()
+    try:
+        app = Glideline()
+        app.run()
+    except Exception as e:
+        logging.critical(f"Uncaught exception: {e}\nTraceback: {e.__traceback__}")
+        quit()

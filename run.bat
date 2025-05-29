@@ -13,7 +13,6 @@ if not exist venv (
 @REM So this does nothing if we *just* went through venv setup
 call ".\venv\Scripts\activate.bat"
 
-echo Running
 python main.py
 
 call "deactivate.bat"

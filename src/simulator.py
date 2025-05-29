@@ -1,4 +1,5 @@
 from utilities import *
+from math import atan2, sin, cos
 
 def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
     """Simulates elytra speed and angle changes. Does not take stable_timer into account.
@@ -33,3 +34,76 @@ def simulate(initial_angle:float, initial_speed:float, angle:float) -> tuple:
             new_speed = Approach(initial_speed, MAX_SPEED, DELTA_TIME * ACCEL * abs(yInput))
 
     return new_angle, new_speed
+
+class State:
+    speed:float
+    angle:float
+    facing:Facings
+    pos_x:float
+    pos_y:float
+
+    wind_x:float
+    wind_y:float
+
+    init_state:tuple
+
+    def __init__(self, st_string:str):
+        """Parses a CelesteTAS State string as a State object."""
+        gamestate_data = st_string.strip().splitlines()
+        speedIndex = [1 if x.startswith(
+            "Speed") else 0 for x in gamestate_data].index(1)
+        speedString = gamestate_data[speedIndex][len("Speed: "):]
+        speedX = float(speedString.split(", ")[0])
+        speedY = float(speedString.split(", ")[1])
+        # flip the x speed if facing left
+        self.facing = Facings.Left if speedX < 0 else Facings.Right
+
+        self.speed = sqrt((speedX**2) + (speedY**2))
+        self.angle = (
+            ((atan2(speedY, speedX * self.facing.value) * RAD_TO_DEG) + 90) + 360) % 360
+
+        posIndex = [1 if x.startswith(
+            "Pos") else 0 for x in gamestate_data].index(1)
+        posString = gamestate_data[posIndex][len("Pos: "):]
+        self.pos_x, self.pos_y = (
+            float(posString.split(", ")[0]),
+            float(posString.split(", ")[1])
+        )
+
+        
+        windIndex =[1 if x.startswith(
+            "Wind") else 0 for x in gamestate_data]
+        if 1 in windIndex:
+            logging.info("Found wind data.")
+            windString = gamestate_data[windIndex.index(1)][len("Wind: "):]
+            self.wind_x, self.wind_y = (
+                float(windString.split(", ")[0])/10,
+                float(windString.split(", ")[1])/10
+            )
+        else:
+            self.wind_x, self.wind_y = 0, 0
+            logging.warning("Couldn't find wind information. Make sure that `Wind: {Level.Wind}` is in the Custom HUD Info.")
+
+        self.init_state = (self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, self.facing.value)
+    
+    @classmethod
+    def from_direct(cls, pos_x:float, pos_y:float, speed:float, angle:float, wind_x:float, wind_y:float, facing:int) -> "State":
+        new = State.__new__(State)
+        new.pos_x, new.pos_y, new.speed, new.angle, new.wind_x, new.wind_y, new.facing = pos_x, pos_y, speed, angle, wind_x, wind_y, Facings(facing)
+        new.init_state = (pos_x, pos_y, speed, angle, wind_x, wind_y, facing)
+        return new
+    
+    def clone_state(self) -> "State":
+        return State.from_direct(*self.init_state)
+
+    def step(self, angle:float):
+        self.angle, self.speed = simulate(self.angle, self.speed, angle)
+        
+        self.pos_x += (self.speed * sin(self.angle * DEG_TO_RAD) + self.wind_x) * DELTA_TIME * self.facing.value
+        self.pos_y -= (self.speed * cos(self.angle * DEG_TO_RAD) + self.wind_y) * DELTA_TIME
+        logging.debug(f"{id(self)} stepped: angle={self.angle}, speed={self.speed}")
+    
+    def reset_state(self):
+        logging.debug(f"{id(self)} reset to {self.init_state}")
+        self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, facing_val = self.init_state
+        self.facing = Facings(facing_val)
