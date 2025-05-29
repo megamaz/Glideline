@@ -16,7 +16,7 @@ import os
 class ColorFormatter(logging.Formatter):
     COLORS = {
         'DEBUG': '\033[94m',   # blue
-        'INFO': '\033[92m',    # green
+        'INFO': '', # regular
         'WARNING': '\033[93m', # yellow
         'ERROR': '\033[91m',   # red
         'CRITICAL': '\033[95m' # magenta
@@ -28,10 +28,26 @@ class ColorFormatter(logging.Formatter):
         msg = super().format(record)
         return f"{color}{msg}{self.RESET}"
 
-level = logging.DEBUG if "--debug" in sys.argv else logging.INFO
-handler = logging.StreamHandler()
-handler.setFormatter(ColorFormatter("[%(asctime)s %(levelname)s %(funcName)s]: %(message)s"))
-logging.basicConfig(level=level, handlers=[handler])
+def setup_logging():
+    print("Setting up Python logger")
+    level = logging.DEBUG if "--debug" in sys.argv else logging.INFO
+
+    string_format = "[%(asctime)s.%(msecs)03d %(levelname)s %(name)s.%(funcName)s]: %(message)s"
+    string_datefmt = "%H:%M:%S"
+    console = logging.StreamHandler()
+    file = logging.FileHandler("./_latest.log", "w")
+    
+    file.setFormatter(logging.Formatter(string_format, datefmt=string_datefmt))
+    console.setFormatter(ColorFormatter(string_format, datefmt=string_datefmt))
+    
+    file.setLevel(logging.DEBUG)
+    console.setLevel(level)
+
+    logging.basicConfig(handlers=[console, file])
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.info("Python logger setup, sending to C++")
+
+    # agent_module.setup_logger(logging)
 
 
 def method_normal_pullup(init_state:State, frames: int) -> list[float]:
@@ -334,5 +350,10 @@ class Glideline:
 
 
 if __name__ == "__main__":
-    app = Glideline()
-    app.run()
+    setup_logging()
+    try:
+        app = Glideline()
+        app.run()
+    except Exception as e:
+        logging.critical(f"Uncaught exception: {e}\nTraceback: {e.__traceback__}")
+        quit()
