@@ -2,3 +2,4 @@ matplotlib
 clipboard
 ffmpeg
 pygubu
+pybind11

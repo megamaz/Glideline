@@ -5,11 +5,14 @@ from constants import *
 from utilities import *
 import tkinter.ttk as ttk
 import tkinter as tk
+import agent_module
 import webbrowser
 import optimizer
 import clipboard
 import logging
+import random
 import pygubu
+import time
 import sys
 import os
 
@@ -28,11 +31,82 @@ class ColorFormatter(logging.Formatter):
         msg = super().format(record)
         return f"{color}{msg}{self.RESET}"
 
+class Agent:
+    class InitType(Enum):
+        random = 0
+        constant = 1
+
+    # even timing indices (0, 2, etc) are level-out
+    # odd timing indices are pull-up
+    timings: list[int]
+    state:State
+
+    def __init__(self, init_type: "Agent.InitType", init_state:State):
+        if init_type == Agent.InitType.random:
+            self.timings = [random.randint(2, 8) for _ in range(250)]
+        elif init_type == Agent.InitType.constant:
+            self.timings = [6 for _ in range(250)]
+
+        self.state = init_state
+    
+    def generate_inputs(self):
+        """Generates a list of inputs from the timings. You should break when you no longer need the next input timings."""
+        for ind, val in enumerate(self.timings):
+            if ind % 2 == 1:
+                for _ in range(val):
+                    angle = optimizer.find_best_vertical_input(self.state)
+                    # self.state.step(angle)
+                    yield angle
+            else:
+                for _ in range(val):
+                    angle = (90.0 if self.state.facing == Facings.Right else 270.0)
+                    # self.state.step(angle)
+                    yield angle
+
+    def copy(self):
+        new_obj = Agent.__new__(Agent)
+        new_obj.state = State.from_direct(*self.state.init_state)
+        new_obj.timings = list(self.timings)
+        return new_obj
+    
+    def mutate_pull_up(self, max_amount:int=5, timing_amount:int = -1):
+        """Randomly mutates pull-up frames
+        timing_amount: How many of the timings to change. If -1, changes all of them."""
+        self.__mutate_even_or_odd(max_amount, timing_amount, 1)
+    
+    def mutate_level_out(self, max_amount:int=5, timing_amount:int = -1):
+        """Randomly mutates level-out frames
+        timing_amount: How many of the timings to change. If -1, changes all of them."""
+        self.__mutate_even_or_odd(max_amount, timing_amount, 0)
+    
+    def mutate_all(self, max_amount:int=5, timing_amount:int=-1):
+        """Mutates all timings randomly.
+        timing_amount: How many of the timings to change. If -1, changes all of them."""
+        self.__mutate_even_or_odd(max_amount, timing_amount, -1)
+        self.__mutate_even_or_odd(-max_amount, timing_amount, -1)
+    
+    def __mutate_even_or_odd(self, max_amount:int=5, timing_amount:int=-1, even_or_odd:int=0):
+        """even_or_odd:
+        - `0` means even only
+        - `1` means odd only
+        - `-1` means both"""
+        amnt_range = [min(0, max_amount), max(0, max_amount)]
+        if timing_amount == -1:
+            for ind, val in enumerate(self.timings):
+                if ind % 2 == even_or_odd or even_or_odd == -1:
+                    self.timings[ind] = max(val + random.randint(*amnt_range), 0)
+        else:
+            indices = [x for x in range(len(self.timings)) if x % 2 == even_or_odd or even_or_odd == -1]
+            random.shuffle(indices)
+            for x in range(timing_amount):
+                self.timings[indices[x]] = max(self.timings[indices[x]] + random.randint(*amnt_range), 0)
+
+
 def setup_logging():
     print("Setting up Python logger")
     level = logging.DEBUG if "--debug" in sys.argv else logging.INFO
 
-    string_format = "[%(asctime)s.%(msecs)03d %(levelname)s %(name)s.%(funcName)s]: %(message)s"
+    string_format = "[%(asctime)s.%(msecs)03d %(levelname)s %(module)s.%(funcName)s]: %(message)s"
     string_datefmt = "%H:%M:%S"
     console = logging.StreamHandler()
     file = logging.FileHandler("./_latest.log", "w")
@@ -47,7 +121,7 @@ def setup_logging():
     logging.getLogger().setLevel(logging.DEBUG)
     logging.info("Python logger setup, sending to C++")
 
-    # agent_module.setup_logger(logging)
+    agent_module.setup_logger(logging)
 
 
 def method_normal_pullup(init_state:State, frames: int) -> list[float]:
@@ -229,6 +303,31 @@ def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, 
 
     return frame_data
 
+def method_agent(init_state:State, frames:int, target:list[float]) -> list[float]:
+    """Uses C++ and runs an agent method."""
+    agent_amount = 20
+    epochs = 2500
+    mutation_rate = 7
+    learning_rate = 50
+    speed_multiplier = 2.5
+    dist_multiplier = -1.0
+    time_multiplier = -2.0
+    keep_top = 10
+    result = agent_module.train(agent_amount, epochs, mutation_rate, learning_rate, *init_state.init_state, *target, speed_multiplier, dist_multiplier, time_multiplier, keep_top)
+
+    agent = Agent.__new__(Agent)
+    agent.timings = result
+    agent.state = init_state
+    frame_data = []
+    for i in agent.generate_inputs():
+        agent.state.step(i)
+        frame_data.append(i)
+        if agent.state.pos_x >= target[0]:
+            break
+    else:
+        logging.warning("Agent failed to arrive.")
+
+    return frame_data
 
 class Glideline:
     def __init__(self, main=None):
@@ -300,7 +399,11 @@ class Glideline:
         wiggle_offset = self.builder.get_variable("wiggle_offset").get()
 
         if active_method == 0:  # normal pullup
-            frame_data = method_normal_pullup(gamestate_data, frame_count)
+            start = time.time()
+            frame_data = method_agent(gamestate_data, frame_count, target)
+            end = time.time()
+            logging.warning("IN TESTING: To test the Agent Method, normal pullup has been temporarily replaced with the agent method. Only remove this warning once the agent method has been implemented as a standalone method selection.")
+            logging.info(f"Completed in {end-start:.2f}s")
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
         elif active_method == 1:  # megajoule method
