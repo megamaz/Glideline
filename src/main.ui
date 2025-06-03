@@ -26,7 +26,7 @@
     <child>
       <object class="ttk.Label" id="label1">
         <property name="takefocus">true</property>
-        <property name="text" translatable="yes">Enter Game state</property>
+        <property name="text" translatable="yes">Game state</property>
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">0</property>
