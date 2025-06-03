@@ -232,16 +232,8 @@ def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, 
 
     return frame_data
 
-def method_agent(init_state:State, frames:int, target:list[float]) -> list[float]:
+def method_agent(init_state:State, frames:int, target:list[float], agent_amount:int, epochs:int, keep_top:int, mutation_rate:int, learning_rate:int, speed_multiplier:float, dist_multiplier:float, time_multiplier:float) -> list[float]:
     """Uses C++ and runs an agent method."""
-    agent_amount = 20
-    epochs = 2500
-    mutation_rate = 7
-    learning_rate = 25
-    speed_multiplier = 2.0
-    dist_multiplier = -1.5
-    time_multiplier = -2.0
-    keep_top = 1
     result = agent_module.train(agent_amount, epochs, mutation_rate, learning_rate, *init_state.init_state, *target, speed_multiplier, dist_multiplier, time_multiplier, keep_top)
     logging.debug(f"Result timings: {result}")
 
@@ -264,8 +256,9 @@ def method_agent(init_state:State, frames:int, target:list[float]) -> list[float
 
         if state.pos_x >= target[0]:
                 break
-        
     
+    logging.info(f"Predicted arrival: Pos={state.pos_x}, {state.pos_y} / Speed={state.speed} / Arrival in {len(frame_data)}f")
+    logging.debug(f"Percentage of flight path used: {((i+1)/len(result))*100}%.")
 
     return frame_data
 
@@ -339,11 +332,7 @@ class Glideline:
         wiggle_offset = self.builder.get_variable("wiggle_offset").get()
 
         if active_method == 0:  # normal pullup
-            start = time.time()
-            frame_data = method_agent(gamestate_data, frame_count, target)
-            end = time.time()
-            logging.warning("IN TESTING: To test the Agent Method, normal pullup has been temporarily replaced with the agent method. Only remove this warning once the agent method has been implemented as a standalone method selection.")
-            logging.info(f"Completed in {end-start:.2f}s")
+            frame_data = method_normal_pullup(gamestate_data, frame_count)
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
         elif active_method == 1:  # megajoule method
@@ -360,6 +349,27 @@ class Glideline:
 
         elif active_method == 2:  # manual wiggle
             frame_data = method_manual_wiggle(gamestate_data, frame_count, wiggle_horizontal, wiggle_vertical, wiggle_offset)
+            self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
+        
+        elif active_method == 3: # agent method
+            # fetch all the variables
+            agent_amount = self.builder.get_variable("agent_amount").get()
+            epochs = self.builder.get_variable("epoch_amount").get()
+            keep = self.builder.get_variable("keep_top").get()
+            mutation_rate = self.builder.get_variable("mutation_rate").get()
+            learning_rate = self.builder.get_variable("learning_rate").get()
+            speed_multiplier = self.builder.get_variable("speed_multiplier").get()
+            dist_multiplier = self.builder.get_variable("dist_multiplier").get()
+            time_multiplier = self.builder.get_variable("time_multiplier").get()
+
+            # since learning rate is a percent
+            learning_rate = int((learning_rate / 100) * 250)
+
+            start = time.time()
+            frame_data = method_agent(gamestate_data, frame_count, target, agent_amount, epochs, keep, mutation_rate, learning_rate, speed_multiplier, dist_multiplier, time_multiplier)
+            end = time.time()
+            
+            logging.info(f"Completed in {end-start:.2f}s")
             self.set_output_text(optimizer.frameDataToInputs(frame_data, hotkey))
 
     def set_output_text(self, text):
@@ -385,8 +395,19 @@ class Glideline:
 
             self.set_output_text(optimizer.frameDataToInputs(self.input_data_mj[mj_selection.current()], hotkey))
     
-    def info(self):
-        box = messagebox.showinfo("How To Use", open("./infobox.txt", "r", encoding="utf-8").read())
+    def info(self, file:str):
+        """Opens a file and displays it as an info box. The first line of that file will be used as the window title."""
+        with open(file, "r", encoding="utf-8") as infobox:
+            contents = infobox.read().splitlines()
+            title = contents[0]
+            text = "\n".join(contents[1:])
+        messagebox.showinfo(title, text)
+
+    def how_to_use(self):
+        self.info("infobox.txt")
+    
+    def agent_info(self):
+        self.info("agent_options.txt")
     
     def doc_clipboard(self):
         webbrowser.open_new("https://docs.google.com/document/d/1xFF6wjdig5k9vOUF3mAvvWh4pF2HBvOw5PJ-aCNNeTo")

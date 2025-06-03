@@ -1,6 +1,7 @@
+How To Use
 Welcome to Glideline! Some quick tips on using this:
 Copy the game state from Studio and paste it into the left box, select your preferred optimization method, and hit optimize.
-
+It is recommended that you add `Wind: {Level.Wind}` into your CustomInfoHUD. Wind will affect the result of automated path finders.
 
 Here's how each method works:
 - Optimized Pullup: Simply generates the inputs to pull-up with the best speed retention.
@@ -11,5 +12,7 @@ Here's how each method works:
 
 - Manual Wiggle: Uses the wiggle data you set to generate a wiggle (wiggles between holding 90 and optimized pull-up.)
     The offset controls how far into the wiggle cycle you start.
+
+- Agent Wiggle: Uses an agent training method over several thousand iterations in order to find a theoretically optimized wiggle path. This is relatively complex and has many parameters that can heavily affect the final output.
 
 A wiggle is a quick alternation between holding a horizontal input to preserve speed, and a vertical input to change your direction. It's more optimal than holding a single direction, since you only lose speed on every other frame.

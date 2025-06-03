@@ -1,0 +1,22 @@
+Agent Options Info
+Agent Amount (Recommended: 20-40): How many agents to test at once.
+
+Epoch Amount (Recommended: 2500>): How many epochs to train the agents for.
+
+Keep Top (Recommended: half of agent amount): The agents are graded based on how they did, and then only a portion of them are kept. This decides how many of them to keep. It's recommended you keep this greater than 1, as it allows the less-than-optimal strategies to be further optimized and potentially take over #1. Too high values will slow down learning, and too low values will prevent the agents from settling on an optima.
+
+Mutation Rate (Recommended: 3-10): How much to modify the agents. Larger values will promote exploration; this means that the agents will try completely different flight patterns, and is more likely to find the global optima. However, larger values will require more epochs. Lower values will promote fine-tuning, meaning that whatever optima the agent has already found will be further optimized until it can't be optimized anymore.
+
+Learning Rate (Recommended: 10%-50%): How much of the flight path pattern of the agent to modify. The flight path pattern is split into 250 parts. Typically, the later half of the parts don't actually end up being used, so this value will heavily depend on the length of your flight.
+
+
+
+MULTIPLIERS
+Multipliers simply affect how much to reward each agent based on the specific property of that agent when it finishes its flight path. Positive values will reward the agent for having more, and negative values will reward the agent for having less. The Distance Multiplier is negative because we want the agent to arrive as close as possible to the target, ie, having a smaller distance value.
+These multipliers will depend on your flight speed and a lot of factors and will require a lot of tweaking. 
+
+Speed multiplier (Recommended: 1.5>): How much to reward the agent for having speed.
+
+Distance Multiplier (Recommended: -1.0<): How much to reward the agent for being close to the goal.
+
+Time Multiplier (Recommended: -2.0<): How much to reward the agent for arriving in less frames.
