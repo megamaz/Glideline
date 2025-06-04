@@ -58,7 +58,7 @@ def method_normal_pullup(init_state:State, frames: int) -> list[float]:
     state = init_state.clone_state()
     frame_data = []
     for _ in range(frames):
-        angle = optimizer.find_best_vertical_input(init_state.angle, init_state.speed, init_state.facing)
+        angle = optimizer.find_best_vertical_input(state.angle, state.speed, init_state.facing)
         state.step(angle)
         frame_data.append(angle)
 
@@ -217,7 +217,7 @@ def method_manual_wiggle(init_state:State, frames: int, wiggle_horizontal: int, 
         if wiggling:
             angle_hold = 90.0 if init_state.facing == Facings.Right else 270.0
         else:
-            angle_hold = optimizer.find_best_vertical_input(init_state.angle, init_state.speed, init_state.facing)
+            angle_hold = optimizer.find_best_vertical_input(state.angle, state.speed, state.facing)
 
         frame_data.append(angle_hold)
         state.step(angle_hold)
@@ -251,10 +251,10 @@ def method_agent(init_state:State, frames:int, target:list[float], agent_amount:
                 frame_data.append(angle)
 
             # logging.debug(f"Python simulated Agent with new pos=[{state.pos_x}, {state.pos_y}], speed={state.speed}")
-            if state.pos_x >= target[0]:
+            if state.pos_x * state.facing.value >= target[0] * state.facing.value:
                 break
 
-        if state.pos_x >= target[0]:
+        if state.pos_x * state.facing.value >= target[0] * state.facing.value:
                 break
     
     logging.info(f"Predicted arrival: Pos={state.pos_x}, {state.pos_y} / Speed={state.speed} / Arrival in {len(frame_data)}f")

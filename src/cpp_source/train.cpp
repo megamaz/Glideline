@@ -38,6 +38,7 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
         delete cloned_state;
     }
 
+    bool fine_tuning = false;
     for (int e = 0; e < epochs; e++)
     {
         // std::cout << "\rSimulating and scoring agents for epoch " << e+1 << "/" << epochs << " (" << ((float)(e+1)/(float)(epochs))*100.0f << "%)" << std::flush;
@@ -60,7 +61,7 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
                 agent->state.step(input);
                 // std::cout << "new pos_x=" + std::to_string(agent->state.pos_x) + " pos_y=" + std::to_string(agent->state.pos_y) + " speed=" + std::to_string(agent->state.speed) + " angle=" + std::to_string(agent->state.angle) << std::endl;
                 // logger.attr("debug")("Agent #" + std::to_string(a + 1) + " new pos_x=" + std::to_string(agent->state.pos_x) + " pos_y=" + std::to_string(agent->state.pos_y) + " speed=" + std::to_string(agent->state.speed) + " angle=" + std::to_string(agent->state.angle) + " input=" + std::to_string(input));
-                if (agent->state.pos_x >= target[0])
+                if (agent->state.pos_x * agent->state.facing >= target[0] * agent->state.facing)
                 {
                     double score = (agent->state.speed * speed_multiplier) + (std::abs(agent->state.pos_y - target[1]) * distance_multiplier) + (frames * frames_multiplier);
                     agent_scores[a] = score;
@@ -68,7 +69,7 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
                 }
                 frames++;
             }
-            if (agent->state.pos_x < target[0])
+            if (agent->state.pos_x * agent->state.facing < target[0] * agent->state.facing)
             {
                 agent_scores[a] = -inf;
             }
@@ -104,6 +105,11 @@ std::vector<int> train(int agent_amount, int epochs, int mutate_rate, int learni
         // generate new agents
         int n = 0;
         // std::cout << "Cloning and mutation" << std::endl;
+        // if(((float)epochs) * 0.9 < ((float)e) * 0.9 && !fine_tuning) // if we're on last 10% of epochs, turn down mutation rate for fine-tuning
+        // {
+        //     mutate_rate /= 2;
+        //     fine_tuning = true;
+        // }
         while (agents.size() < (size_t)agent_amount)
         {
             Agent *agent = agents[n % agents.size()];
