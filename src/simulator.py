@@ -84,6 +84,8 @@ class State:
             self.wind_x, self.wind_y = 0, 0
             logging.warning("Couldn't find wind information. Make sure that `Wind: {Level.Wind}` is in the Custom HUD Info.")
 
+        logging.info(f"Loaded state: speed={self.speed:.12f}, angle={self.angle:.12f}, pos=[{self.pos_x:12f}, {self.pos_y:.12f}], facing={self.facing}, wind=[{self.wind_x:.12f}, {self.wind_y:12f}]")
+
         self.init_state = (self.pos_x, self.pos_y, self.speed, self.angle, self.wind_x, self.wind_y, self.facing.value)
     
     @classmethod
